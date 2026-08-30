@@ -143,6 +143,52 @@ var (
 		Message:      "assignment not found",
 	}
 
+	QuizCreateError = ErrorDetails{
+		InternalCode: "quiz:create-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "failed to create quiz",
+	}
+	QuizGetError = ErrorDetails{
+		InternalCode: "quiz:get-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "failed to get quiz",
+	}
+	QuizListError = ErrorDetails{
+		InternalCode: "quiz:list-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "failed to list quizzes",
+	}
+	QuizNotFoundError = ErrorDetails{
+		InternalCode: "quiz:not-found",
+		StatusCode:   http.StatusNotFound,
+		Message:      "quiz not found",
+	}
+	QuizAttemptNotFoundError = ErrorDetails{
+		InternalCode: "quiz:attempt-not-found",
+		StatusCode:   http.StatusNotFound,
+		Message:      "attempt not found",
+	}
+	QuizAttemptAlreadySubmittedError = ErrorDetails{
+		InternalCode: "quiz:attempt-already-submitted",
+		StatusCode:   http.StatusBadRequest,
+		Message:      "this attempt was already submitted",
+	}
+	QuizAttemptsExhaustedError = ErrorDetails{
+		InternalCode: "quiz:attempts-exhausted",
+		StatusCode:   http.StatusBadRequest,
+		Message:      "no attempts left for this quiz",
+	}
+	QuizNotAvailableError = ErrorDetails{
+		InternalCode: "quiz:not-available",
+		StatusCode:   http.StatusBadRequest,
+		Message:      "this quiz is not open right now",
+	}
+	QuizNotEnrolledError = ErrorDetails{
+		InternalCode: "quiz:not-enrolled",
+		StatusCode:   http.StatusForbidden,
+		Message:      "only enrolled students can take this quiz",
+	}
+
 	SubmissionCreateError = ErrorDetails{
 		InternalCode: "submission:create-error",
 		StatusCode:   http.StatusInternalServerError,

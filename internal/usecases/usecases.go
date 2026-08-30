@@ -5,6 +5,7 @@ import (
 	ucAssignment "github.com/tapiaw38/practiq-campus-be/internal/usecases/assignment"
 	ucCalendar "github.com/tapiaw38/practiq-campus-be/internal/usecases/calendar_event"
 	ucCourse "github.com/tapiaw38/practiq-campus-be/internal/usecases/course"
+	ucGroup "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_group"
 	ucMaterial "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_material"
 	ucSection "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_section"
 	ucEnrollment "github.com/tapiaw38/practiq-campus-be/internal/usecases/enrollment"
@@ -14,6 +15,8 @@ import (
 	ucNotification "github.com/tapiaw38/practiq-campus-be/internal/usecases/notification"
 	ucPreference "github.com/tapiaw38/practiq-campus-be/internal/usecases/preference"
 	ucProfile "github.com/tapiaw38/practiq-campus-be/internal/usecases/profile"
+	ucQuiz "github.com/tapiaw38/practiq-campus-be/internal/usecases/quiz"
+	ucQuizAttempt "github.com/tapiaw38/practiq-campus-be/internal/usecases/quiz_attempt"
 	ucRubric "github.com/tapiaw38/practiq-campus-be/internal/usecases/rubric"
 	ucSubmission "github.com/tapiaw38/practiq-campus-be/internal/usecases/submission"
 	ucUpload "github.com/tapiaw38/practiq-campus-be/internal/usecases/upload"
@@ -67,6 +70,8 @@ type CourseSectionUsecases struct {
 	Delete ucSection.DeleteUsecase
 }
 
+type CourseGroupUsecases struct{ Manage ucGroup.Usecase }
+
 type AssignmentUsecases struct {
 	Create ucAssignment.CreateUsecase
 	List   ucAssignment.ListUsecase
@@ -82,6 +87,23 @@ type SubmissionUsecases struct {
 }
 type RubricUsecases struct{ Manage ucRubric.Usecase }
 type NotificationUsecases struct{ Manage ucNotification.Usecase }
+
+type QuizUsecases struct {
+	Create    ucQuiz.CreateUsecase
+	List      ucQuiz.ListUsecase
+	Get       ucQuiz.GetUsecase
+	Update    ucQuiz.UpdateUsecase
+	Delete    ucQuiz.DeleteUsecase
+	Questions ucQuiz.QuestionsUsecase
+}
+
+type QuizAttemptUsecases struct {
+	Start      ucQuizAttempt.StartUsecase
+	Submit     ucQuizAttempt.SubmitUsecase
+	Get        ucQuizAttempt.GetUsecase
+	ListMine   ucQuizAttempt.ListMineUsecase
+	ListByQuiz ucQuizAttempt.ListByQuizUsecase
+}
 
 type ForumThreadUsecases struct {
 	Create ucThread.CreateUsecase
@@ -117,11 +139,14 @@ type Usecases struct {
 	Course         CourseUsecases
 	Enrollment     EnrollmentUsecases
 	CourseSection  CourseSectionUsecases
+	CourseGroup    CourseGroupUsecases
 	CourseMaterial CourseMaterialUsecases
 	Upload         UploadUsecases
 	Assignment     AssignmentUsecases
 	Submission     SubmissionUsecases
 	Rubric         RubricUsecases
+	Quiz           QuizUsecases
+	QuizAttempt    QuizAttemptUsecases
 	Notification   NotificationUsecases
 	ForumThread    ForumThreadUsecases
 	ForumPost      ForumPostUsecases
@@ -162,6 +187,7 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			List:   ucSection.NewListUsecase(contextFactory),
 			Update: ucSection.NewUpdateUsecase(contextFactory), Delete: ucSection.NewDeleteUsecase(contextFactory),
 		},
+		CourseGroup: CourseGroupUsecases{Manage: ucGroup.New(contextFactory)},
 		CourseMaterial: CourseMaterialUsecases{
 			Create: ucMaterial.NewCreateUsecase(contextFactory),
 			List:   ucMaterial.NewListUsecase(contextFactory),
@@ -181,7 +207,22 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			GetMine:          ucSubmission.NewGetMineUsecase(contextFactory),
 			Grade:            ucSubmission.NewGradeUsecase(contextFactory),
 		},
-		Rubric:       RubricUsecases{Manage: ucRubric.New(contextFactory)},
+		Rubric: RubricUsecases{Manage: ucRubric.New(contextFactory)},
+		Quiz: QuizUsecases{
+			Create:    ucQuiz.NewCreateUsecase(contextFactory),
+			List:      ucQuiz.NewListUsecase(contextFactory),
+			Get:       ucQuiz.NewGetUsecase(contextFactory),
+			Update:    ucQuiz.NewUpdateUsecase(contextFactory),
+			Delete:    ucQuiz.NewDeleteUsecase(contextFactory),
+			Questions: ucQuiz.NewQuestionsUsecase(contextFactory),
+		},
+		QuizAttempt: QuizAttemptUsecases{
+			Start:      ucQuizAttempt.NewStartUsecase(contextFactory),
+			Submit:     ucQuizAttempt.NewSubmitUsecase(contextFactory),
+			Get:        ucQuizAttempt.NewGetUsecase(contextFactory),
+			ListMine:   ucQuizAttempt.NewListMineUsecase(contextFactory),
+			ListByQuiz: ucQuizAttempt.NewListByQuizUsecase(contextFactory),
+		},
 		Notification: NotificationUsecases{Manage: ucNotification.New(contextFactory)},
 		ForumThread: ForumThreadUsecases{
 			Create: ucThread.NewCreateUsecase(contextFactory),
