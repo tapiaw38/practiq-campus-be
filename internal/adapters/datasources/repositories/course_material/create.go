@@ -8,13 +8,13 @@ import (
 
 func (r *repository) Create(ctx context.Context, m domain.CourseMaterial) (string, error) {
 	query := `
-		INSERT INTO course_materials (course_id, section_id, uploader_id, title, description, kind, url)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO course_materials (course_id, assignment_id, section_id, uploader_id, title, description, kind, url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
 	var id string
 	err := r.db.QueryRowContext(ctx, query,
-		m.CourseID, m.SectionID, m.UploaderID, m.Title, m.Description, m.Kind, m.URL,
+		m.CourseID, m.AssignmentID, m.SectionID, m.UploaderID, m.Title, m.Description, m.Kind, m.URL,
 	).Scan(&id)
 	return id, err
 }

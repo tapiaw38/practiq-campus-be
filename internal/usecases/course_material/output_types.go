@@ -15,12 +15,13 @@ const MaterialsFolder = "materials"
 const viewLinkTTL = time.Hour
 
 type MaterialData struct {
-	ID          string  `json:"id"`
-	CourseID    string  `json:"course_id"`
-	SectionID   *string `json:"section_id"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Kind        string  `json:"kind"`
+	ID           string  `json:"id"`
+	CourseID     string  `json:"course_id"`
+	AssignmentID *string `json:"assignment_id"`
+	SectionID    *string `json:"section_id"`
+	Title        string  `json:"title"`
+	Description  string  `json:"description"`
+	Kind         string  `json:"kind"`
 	// URL is the stored value: a private bucket URL for files, or the
 	// external link for kind="link".
 	URL string `json:"url"`
@@ -32,14 +33,15 @@ type MaterialData struct {
 
 func toMaterialData(m domain.CourseMaterial) MaterialData {
 	return MaterialData{
-		ID:          m.ID,
-		CourseID:    m.CourseID,
-		SectionID:   m.SectionID,
-		Title:       m.Title,
-		Description: m.Description,
-		Kind:        m.Kind,
-		URL:         m.URL,
-		CreatedAt:   m.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:           m.ID,
+		CourseID:     m.CourseID,
+		AssignmentID: m.AssignmentID,
+		SectionID:    m.SectionID,
+		Title:        m.Title,
+		Description:  m.Description,
+		Kind:         m.Kind,
+		URL:          m.URL,
+		CreatedAt:    m.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }
 

@@ -11,8 +11,10 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/enrollment"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/forum_post"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/forum_thread"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/notification"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/preference"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/profile"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/rubric"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/submission"
 )
 
@@ -25,10 +27,12 @@ type Repositories struct {
 	Enrollment     enrollment.Repository
 	Assignment     assignment.Repository
 	Submission     submission.Repository
+	Rubric         rubric.Repository
 	ForumThread    forum_thread.Repository
 	ForumPost      forum_post.Repository
 	CalendarEvent  calendar_event.Repository
 	Conversation   conversation.Repository
+	Notification   notification.Repository
 }
 
 type Factory func() *Repositories
@@ -44,10 +48,12 @@ func NewFactory(ds *datasources.Datasources) func() *Repositories {
 			Enrollment:     enrollment.NewRepository(ds.DB),
 			Assignment:     assignment.NewRepository(ds.DB),
 			Submission:     submission.NewRepository(ds.DB),
+			Rubric:         rubric.NewRepository(ds.DB),
 			ForumThread:    forum_thread.NewRepository(ds.DB),
 			ForumPost:      forum_post.NewRepository(ds.DB),
 			CalendarEvent:  calendar_event.NewRepository(ds.DB),
 			Conversation:   conversation.NewRepository(ds.DB),
+			Notification:   notification.NewRepository(ds.DB),
 		}
 	}
 }

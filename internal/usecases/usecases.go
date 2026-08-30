@@ -11,8 +11,10 @@ import (
 	ucPost "github.com/tapiaw38/practiq-campus-be/internal/usecases/forum_post"
 	ucThread "github.com/tapiaw38/practiq-campus-be/internal/usecases/forum_thread"
 	ucMessage "github.com/tapiaw38/practiq-campus-be/internal/usecases/message"
+	ucNotification "github.com/tapiaw38/practiq-campus-be/internal/usecases/notification"
 	ucPreference "github.com/tapiaw38/practiq-campus-be/internal/usecases/preference"
 	ucProfile "github.com/tapiaw38/practiq-campus-be/internal/usecases/profile"
+	ucRubric "github.com/tapiaw38/practiq-campus-be/internal/usecases/rubric"
 	ucSubmission "github.com/tapiaw38/practiq-campus-be/internal/usecases/submission"
 	ucUpload "github.com/tapiaw38/practiq-campus-be/internal/usecases/upload"
 )
@@ -78,6 +80,8 @@ type SubmissionUsecases struct {
 	GetMine          ucSubmission.GetMineUsecase
 	Grade            ucSubmission.GradeUsecase
 }
+type RubricUsecases struct{ Manage ucRubric.Usecase }
+type NotificationUsecases struct{ Manage ucNotification.Usecase }
 
 type ForumThreadUsecases struct {
 	Create ucThread.CreateUsecase
@@ -117,6 +121,8 @@ type Usecases struct {
 	Upload         UploadUsecases
 	Assignment     AssignmentUsecases
 	Submission     SubmissionUsecases
+	Rubric         RubricUsecases
+	Notification   NotificationUsecases
 	ForumThread    ForumThreadUsecases
 	ForumPost      ForumPostUsecases
 	CalendarEvent  CalendarEventUsecases
@@ -175,6 +181,8 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			GetMine:          ucSubmission.NewGetMineUsecase(contextFactory),
 			Grade:            ucSubmission.NewGradeUsecase(contextFactory),
 		},
+		Rubric:       RubricUsecases{Manage: ucRubric.New(contextFactory)},
+		Notification: NotificationUsecases{Manage: ucNotification.New(contextFactory)},
 		ForumThread: ForumThreadUsecases{
 			Create: ucThread.NewCreateUsecase(contextFactory),
 			List:   ucThread.NewListUsecase(contextFactory),

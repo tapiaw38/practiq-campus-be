@@ -72,6 +72,11 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if created == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
+	if enrollments, err := app.Repositories.Enrollment.ListByCourse(ctx, courseID); err == nil {
+		for _, enrollment := range enrollments {
+			_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: enrollment.UserID, Type: "assignment_created", Title: "Nueva tarea: " + created.Title, Body: "Tenés una nueva tarea", Data: `{"assignment_id":"` + created.ID + `","course_id":"` + courseID + `"}`})
+		}
+	}
 
 	return &CreateOutput{Data: toAssignmentData(*created)}, nil
 }

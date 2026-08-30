@@ -22,11 +22,12 @@ type (
 	}
 
 	CreateInput struct {
-		SectionID   *string
-		Title       string
-		Description string
-		Kind        string
-		URL         string
+		AssignmentID *string
+		SectionID    *string
+		Title        string
+		Description  string
+		Kind         string
+		URL          string
 	}
 
 	CreateOutput struct {
@@ -60,6 +61,15 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if appErr := requesterOwnsCourse(ctx, app, requesterID, isSuperAdmin, courseID); appErr != nil {
 		return nil, appErr
 	}
+	if input.AssignmentID != nil {
+		assignment, err := app.Repositories.Assignment.Get(ctx, *input.AssignmentID)
+		if err != nil {
+			return nil, apperrors.NewApplicationError(mappings.AssignmentGetError, err)
+		}
+		if assignment == nil || assignment.CourseID != courseID {
+			return nil, apperrors.NewBadRequestError("assignment does not belong to this course")
+		}
+	}
 	if input.SectionID != nil {
 		section, err := app.Repositories.CourseSection.Get(ctx, *input.SectionID)
 		if err != nil {
@@ -82,13 +92,14 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	}
 
 	id, err := app.Repositories.CourseMaterial.Create(ctx, domain.CourseMaterial{
-		CourseID:    courseID,
-		SectionID:   input.SectionID,
-		UploaderID:  requesterID,
-		Title:       input.Title,
-		Description: input.Description,
-		Kind:        input.Kind,
-		URL:         input.URL,
+		CourseID:     courseID,
+		AssignmentID: input.AssignmentID,
+		SectionID:    input.SectionID,
+		UploaderID:   requesterID,
+		Title:        input.Title,
+		Description:  input.Description,
+		Kind:         input.Kind,
+		URL:          input.URL,
 	})
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.MaterialCreateError, err)

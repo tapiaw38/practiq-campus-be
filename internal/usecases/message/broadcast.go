@@ -71,6 +71,7 @@ func (u *broadcastUsecase) Execute(ctx context.Context, requesterID string, isSu
 		if _, err := app.Repositories.Conversation.AddMessage(ctx, conversationID, requesterID, input.Body); err != nil {
 			return nil, apperrors.NewApplicationError(mappings.MessageCreateError, err)
 		}
+		_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: e.UserID, Type: "message", Title: "Mensaje de tu docente", Body: input.Body, Data: `{"conversation_id":"` + conversationID + `"}`})
 		sent++
 	}
 

@@ -3,6 +3,7 @@ package calendar_event
 import (
 	"context"
 
+	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
@@ -30,6 +31,9 @@ func (u *deleteUsecase) Execute(ctx context.Context, requesterID, eventID string
 	}
 	if err := app.Repositories.CalendarEvent.Delete(ctx, eventID); err != nil {
 		return apperrors.NewApplicationError(mappings.CalendarEventDeleteError, err)
+	}
+	for _, attendeeID := range event.AttendeeIDs {
+		_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: attendeeID, Type: "calendar_event_cancelled", Title: "Evento cancelado: " + event.Title, Body: "El evento fue eliminado", Data: `{"event_id":"` + eventID + `"}`})
 	}
 	return nil
 }

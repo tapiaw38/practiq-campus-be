@@ -17,7 +17,7 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 	var materials []domain.CourseMaterial
 	for rows.Next() {
 		var m domain.CourseMaterial
-		if err := rows.Scan(&m.ID, &m.CourseID, &m.SectionID, &m.UploaderID, &m.Title, &m.Description, &m.Kind, &m.URL, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.CourseID, &m.AssignmentID, &m.SectionID, &m.UploaderID, &m.Title, &m.Description, &m.Kind, &m.URL, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		materials = append(materials, m)

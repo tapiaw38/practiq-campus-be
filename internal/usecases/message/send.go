@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
@@ -109,5 +110,6 @@ func (u *sendUsecase) Execute(ctx context.Context, requesterID string, input Sen
 	if created == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
+	_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: recipientID, Type: "message", Title: "Nuevo mensaje", Body: input.Body, Data: `{"conversation_id":"` + conversationID + `"}`})
 	return &SendOutput{Data: toMessageData(*created)}, nil
 }

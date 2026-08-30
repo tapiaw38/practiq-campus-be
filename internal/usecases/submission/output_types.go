@@ -2,17 +2,32 @@ package submission
 
 import "github.com/tapiaw38/practiq-campus-be/internal/domain"
 
+type RubricScoreData struct {
+	CriterionID string `json:"criterion_id"`
+	Score       int    `json:"score"`
+	Feedback    string `json:"feedback"`
+}
+
 type SubmissionData struct {
-	ID           string  `json:"id"`
-	AssignmentID string  `json:"assignment_id"`
-	UserID       string  `json:"user_id"`
-	UserName     string  `json:"user_name"`
-	Content      string  `json:"content"`
-	Status       string  `json:"status"`
-	Score        *int    `json:"score"`
-	Feedback     string  `json:"feedback"`
-	SubmittedAt  string  `json:"submitted_at"`
-	GradedAt     *string `json:"graded_at"`
+	ID           string            `json:"id"`
+	AssignmentID string            `json:"assignment_id"`
+	UserID       string            `json:"user_id"`
+	UserName     string            `json:"user_name"`
+	Content      string            `json:"content"`
+	Status       string            `json:"status"`
+	Score        *int              `json:"score"`
+	Feedback     string            `json:"feedback"`
+	SubmittedAt  string            `json:"submitted_at"`
+	GradedAt     *string           `json:"graded_at"`
+	RubricScores []RubricScoreData `json:"rubric_scores"`
+}
+
+func withRubricScores(data SubmissionData, scores []domain.RubricScore) SubmissionData {
+	data.RubricScores = make([]RubricScoreData, 0, len(scores))
+	for _, score := range scores {
+		data.RubricScores = append(data.RubricScores, RubricScoreData{CriterionID: score.CriterionID, Score: score.Score, Feedback: score.Feedback})
+	}
+	return data
 }
 
 func toSubmissionData(s domain.Submission) SubmissionData {

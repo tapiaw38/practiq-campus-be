@@ -53,6 +53,9 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID, eventID string
 	if updated == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
+	for _, attendeeID := range attendees {
+		_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: attendeeID, Type: "calendar_event_updated", Title: "Evento actualizado: " + updated.Title, Body: "Revisá fecha y detalles", Data: `{"event_id":"` + eventID + `"}`})
+	}
 	return &UpdateOutput{Data: toEventData(*updated)}, nil
 }
 

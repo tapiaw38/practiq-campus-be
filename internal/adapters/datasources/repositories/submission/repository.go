@@ -9,6 +9,7 @@ import (
 
 type Repository interface {
 	Create(context.Context, domain.Submission) (string, error)
+	Resubmit(context.Context, string, string) error
 	Get(context.Context, string) (*domain.Submission, error)
 	GetByAssignmentAndUser(context.Context, string, string) (*domain.Submission, error)
 	ListByAssignment(context.Context, string) ([]domain.Submission, error)

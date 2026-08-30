@@ -109,6 +109,9 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CalendarEventCreateError, err)
 	}
+	for _, attendeeID := range attendees {
+		_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: attendeeID, Type: "calendar_event", Title: "Nuevo evento: " + input.Title, Body: "Agendado para " + input.StartsAt.Format("02/01 15:04"), Data: `{"event_id":"` + id + `"}`})
+	}
 
 	return &CreateOutput{Data: EventData{
 		ID:              id,

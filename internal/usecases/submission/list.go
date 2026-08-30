@@ -52,5 +52,13 @@ func (u *listByAssignmentUsecase) Execute(ctx context.Context, requesterID strin
 		return nil, apperrors.NewApplicationError(mappings.SubmissionListError, err)
 	}
 
-	return &ListOutput{Data: toSubmissionDataList(submissions)}, nil
+	data := toSubmissionDataList(submissions)
+	for i, submission := range submissions {
+		scores, err := app.Repositories.Rubric.Scores(ctx, submission.ID)
+		if err != nil {
+			return nil, apperrors.NewInternalError(err)
+		}
+		data[i] = withRubricScores(data[i], scores)
+	}
+	return &ListOutput{Data: data}, nil
 }

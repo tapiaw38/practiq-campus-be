@@ -9,10 +9,11 @@ import (
 )
 
 type createInput struct {
-	SectionID   *string `json:"section_id"`
-	Title       string  `json:"title" binding:"required"`
-	Description string  `json:"description"`
-	Kind        string  `json:"kind" binding:"required"`
+	AssignmentID *string `json:"assignment_id"`
+	SectionID    *string `json:"section_id"`
+	Title        string  `json:"title" binding:"required"`
+	Description  string  `json:"description"`
+	Kind         string  `json:"kind" binding:"required"`
 	// URL is the value returned by POST /uploads for kind="file", or the
 	// external address the teacher pasted for kind="link".
 	URL string `json:"url" binding:"required"`
@@ -30,11 +31,12 @@ func NewCreateHandler(uc ucMaterial.CreateUsecase) gin.HandlerFunc {
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucMaterial.CreateInput{
-			SectionID:   input.SectionID,
-			Title:       input.Title,
-			Description: input.Description,
-			Kind:        input.Kind,
-			URL:         input.URL,
+			AssignmentID: input.AssignmentID,
+			SectionID:    input.SectionID,
+			Title:        input.Title,
+			Description:  input.Description,
+			Kind:         input.Kind,
+			URL:          input.URL,
 		})
 		if appErr != nil {
 			appErr.Log(c)

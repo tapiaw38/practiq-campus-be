@@ -9,8 +9,13 @@ import (
 )
 
 type gradeInput struct {
-	Score    int    `json:"score"`
-	Feedback string `json:"feedback"`
+	Score        int    `json:"score"`
+	Feedback     string `json:"feedback"`
+	RubricScores []struct {
+		CriterionID string `json:"criterion_id"`
+		Score       int    `json:"score"`
+		Feedback    string `json:"feedback"`
+	} `json:"rubric_scores"`
 }
 
 func NewGradeHandler(uc ucSubmission.GradeUsecase) gin.HandlerFunc {
@@ -27,6 +32,13 @@ func NewGradeHandler(uc ucSubmission.GradeUsecase) gin.HandlerFunc {
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, submissionID, ucSubmission.GradeInput{
 			Score:    input.Score,
 			Feedback: input.Feedback,
+			RubricScores: func() []ucSubmission.RubricScoreInput {
+				out := make([]ucSubmission.RubricScoreInput, 0, len(input.RubricScores))
+				for _, score := range input.RubricScores {
+					out = append(out, ucSubmission.RubricScoreInput{CriterionID: score.CriterionID, Score: score.Score, Feedback: score.Feedback})
+				}
+				return out
+			}(),
 		})
 		if appErr != nil {
 			appErr.Log(c)

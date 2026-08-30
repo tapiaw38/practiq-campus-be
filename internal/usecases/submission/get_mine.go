@@ -41,5 +41,10 @@ func (u *getMineUsecase) Execute(ctx context.Context, requesterID, assignmentID 
 	}
 
 	data := toSubmissionData(*s)
+	scores, err := app.Repositories.Rubric.Scores(ctx, s.ID)
+	if err != nil {
+		return nil, apperrors.NewInternalError(err)
+	}
+	data = withRubricScores(data, scores)
 	return &GetMineOutput{Data: &data}, nil
 }

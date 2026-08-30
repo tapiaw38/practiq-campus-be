@@ -12,8 +12,10 @@ import (
 	handlerPost "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/forum_post"
 	handlerThread "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/forum_thread"
 	handlerMessage "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/message"
+	handlerNotification "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/notification"
 	handlerPreference "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/preference"
 	handlerProfile "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/profile"
+	handlerRubric "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/rubric"
 	handlerSubmission "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/submission"
 	handlerUpload "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/upload"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/middlewares"
@@ -35,6 +37,8 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api.GET("/profile/me", handlerProfile.NewGetMeHandler(uc.Profile.Get))
 	api.GET("/me/preferences/:scope", handlerPreference.NewGetHandler(uc.Preference.Get))
 	api.PUT("/me/preferences/:scope", handlerPreference.NewUpdateHandler(uc.Preference.Update))
+	api.GET("/notifications", handlerNotification.List(uc.Notification.Manage))
+	api.PUT("/notifications/:id/read", handlerNotification.Read(uc.Notification.Manage))
 
 	// Users — superadmin only: creating (and listing) accounts on behalf of
 	// someone else is an administrative action, not something any teacher
@@ -78,6 +82,8 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api.GET("/courses/:id/assignments", handlerAssignment.NewListHandler(uc.Assignment.List))
 	teacherOnly.PUT("/assignments/:id", handlerAssignment.NewUpdateHandler(uc.Assignment.Update))
 	teacherOnly.DELETE("/assignments/:id", handlerAssignment.NewDeleteHandler(uc.Assignment.Delete))
+	api.GET("/assignments/:id/rubric", handlerRubric.List(uc.Rubric.Manage))
+	teacherOnly.PUT("/assignments/:id/rubric", handlerRubric.Replace(uc.Rubric.Manage))
 
 	// Submissions — creating one is gated by enrollment (checked inside the
 	// usecase), not by role, so it hangs off the plain api group.
