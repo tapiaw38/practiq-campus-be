@@ -20,6 +20,7 @@ type Enrollment struct {
 	ID             string
 	CourseID       string
 	UserID         string
+	UserName       string
 	EnrollmentRole string
 	Status         string
 	EnrolledAt     time.Time

@@ -23,10 +23,12 @@ type (
 	}
 
 	CreateInput struct {
-		Title       string
-		Description string
-		StartDate   *time.Time
-		EndDate     *time.Time
+		Title            string
+		Description      string
+		StartDate        *time.Time
+		EndDate          *time.Time
+		PractiqSubjectID *string
+		Labels           []string
 	}
 
 	CreateOutput struct {
@@ -63,13 +65,15 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	}
 
 	id, err := app.Repositories.Course.Create(ctx, domain.Course{
-		OwnerID:     requesterID,
-		Title:       input.Title,
-		Slug:        slug,
-		Description: input.Description,
-		Status:      domain.CourseStatusDraft,
-		StartDate:   input.StartDate,
-		EndDate:     input.EndDate,
+		OwnerID:          requesterID,
+		Title:            input.Title,
+		Slug:             slug,
+		Description:      input.Description,
+		Status:           domain.CourseStatusDraft,
+		StartDate:        input.StartDate,
+		EndDate:          input.EndDate,
+		PractiqSubjectID: input.PractiqSubjectID,
+		Labels:           normalizeLabels(input.Labels),
 	})
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseCreateError, err)
@@ -84,6 +88,19 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	}
 
 	return &CreateOutput{Data: toCourseData(*created)}, nil
+}
+
+func normalizeLabels(labels []string) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(labels))
+	for _, label := range labels {
+		value := strings.TrimSpace(label)
+		if value != "" && len(value) <= 50 && !seen[strings.ToLower(value)] {
+			result = append(result, value)
+			seen[strings.ToLower(value)] = true
+		}
+	}
+	return result
 }
 
 // randomSuffix disambiguates a slug collision. Time-based, not random: two

@@ -1,0 +1,10 @@
+.env
+build/
+tmp/
+coverage.out
+*.out
+vendor/
+.DS_Store
+.idea
+.vscode/
+.claude/

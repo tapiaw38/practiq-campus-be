@@ -19,7 +19,7 @@ type (
 	}
 
 	CreateInput struct {
-		UserID         string
+		Email          string
 		EnrollmentRole string
 	}
 
@@ -33,8 +33,8 @@ func NewCreateUsecase(contextFactory appcontext.Factory) CreateUsecase {
 }
 
 func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string, input CreateInput) (*CreateOutput, apperrors.ApplicationError) {
-	if input.UserID == "" {
-		return nil, apperrors.NewBadRequestError("user_id is required")
+	if input.Email == "" {
+		return nil, apperrors.NewBadRequestError("email is required")
 	}
 
 	app := u.contextFactory()
@@ -43,7 +43,15 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		return nil, appErr
 	}
 
-	if existing, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, courseID, input.UserID); err != nil {
+	student, err := app.Repositories.Profile.GetByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+	if student == nil {
+		return nil, apperrors.NewApplicationError(mappings.EnrollmentStudentNotFoundError, nil)
+	}
+
+	if existing, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, courseID, student.ID); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentGetError, err)
 	} else if existing != nil {
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentAlreadyExistsError, nil)
@@ -56,7 +64,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 
 	id, err := app.Repositories.Enrollment.Create(ctx, domain.Enrollment{
 		CourseID:       courseID,
-		UserID:         input.UserID,
+		UserID:         student.ID,
 		EnrollmentRole: role,
 		Status:         domain.EnrollmentStatusActive,
 	})

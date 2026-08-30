@@ -13,6 +13,7 @@ type Repository interface {
 	GetBySlug(context.Context, string) (*domain.Course, error)
 	List(context.Context, ListFilter) ([]domain.Course, error)
 	Update(context.Context, string, domain.Course) error
+	Delete(context.Context, string) error
 }
 
 // ListFilter narrows a course listing. OwnerID lists a teacher's own

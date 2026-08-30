@@ -19,11 +19,13 @@ type (
 	}
 
 	UpdateInput struct {
-		Title       string
-		Description string
-		Status      string
-		StartDate   *time.Time
-		EndDate     *time.Time
+		Title            string
+		Description      string
+		Status           string
+		StartDate        *time.Time
+		EndDate          *time.Time
+		PractiqSubjectID *string
+		Labels           *[]string
 	}
 
 	UpdateOutput struct {
@@ -64,6 +66,10 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	current.Status = status
 	current.StartDate = input.StartDate
 	current.EndDate = input.EndDate
+	current.PractiqSubjectID = input.PractiqSubjectID
+	if input.Labels != nil {
+		current.Labels = normalizeLabels(*input.Labels)
+	}
 
 	if err := app.Repositories.Course.Update(ctx, courseID, *current); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseUpdateError, err)

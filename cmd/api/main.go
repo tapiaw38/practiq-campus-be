@@ -8,9 +8,11 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/config"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/database"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/storage"
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases"
 )
 
@@ -33,14 +35,16 @@ func main() {
 	ds := datasources.CreateDatasources(db)
 	reposFactory := repositories.NewFactory(ds)
 	repos := reposFactory()
-	factory := appcontext.NewFactory(repos)
+	integ := integrations.CreateIntegrations(cfg.ServerConfig.AuthAPIURL, cfg.ServerConfig.PractiqAPIURL)
+	store := storage.NewS3Storage(cfg.S3Config)
+	factory := appcontext.NewFactory(repos, integ, store)
 	uc := usecases.NewUsecases(factory)
 
 	app := gin.Default()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.ServerConfig.FrontendURL, "https://campus.practiq.com.ar", "http://localhost:5175"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
@@ -49,7 +53,7 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok", "service": "practiq-campus-be"})
 	})
 
-	web.RegisterRoutes(app, uc)
+	web.RegisterRoutes(app, uc, repos.Profile)
 
 	port := cfg.ServerConfig.Port
 	log.Printf("practiq-campus-be running on port %s", port)

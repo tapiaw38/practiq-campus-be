@@ -3,6 +3,7 @@ package course
 import (
 	"context"
 	"database/sql"
+	"github.com/lib/pq"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 )
@@ -11,7 +12,7 @@ func scanCourse(row *sql.Row) (*domain.Course, error) {
 	var c domain.Course
 	err := row.Scan(
 		&c.ID, &c.OwnerID, &c.Title, &c.Slug, &c.Description, &c.Status,
-		&c.StartDate, &c.EndDate, &c.CreatedAt, &c.UpdatedAt,
+		&c.StartDate, &c.EndDate, &c.CreatedAt, &c.UpdatedAt, &c.PractiqSubjectID, pq.Array(&c.Labels),
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -23,7 +24,7 @@ func scanCourse(row *sql.Row) (*domain.Course, error) {
 }
 
 const selectCourseColumns = `
-	id, owner_id, title, slug, description, status, start_date, end_date, created_at, updated_at
+	id, owner_id, title, slug, description, status, start_date, end_date, created_at, updated_at, practiq_subject_id, labels
 `
 
 func (r *repository) Get(ctx context.Context, id string) (*domain.Course, error) {

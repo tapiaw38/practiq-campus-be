@@ -1,0 +1,84 @@
+package submission
+
+import (
+	"context"
+	"strings"
+
+	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
+	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+)
+
+type (
+	CreateUsecase interface {
+		Execute(context.Context, string, string, CreateInput) (*CreateOutput, apperrors.ApplicationError)
+	}
+
+	createUsecase struct {
+		contextFactory appcontext.Factory
+	}
+
+	CreateInput struct {
+		Content string
+	}
+
+	CreateOutput struct {
+		Data SubmissionData `json:"data"`
+	}
+)
+
+func NewCreateUsecase(contextFactory appcontext.Factory) CreateUsecase {
+	return &createUsecase{contextFactory: contextFactory}
+}
+
+// Execute is any authenticated user — the enrollment check below (not a
+// teacherOnly gate) is what actually decides whether they may submit.
+func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID string, input CreateInput) (*CreateOutput, apperrors.ApplicationError) {
+	if strings.TrimSpace(input.Content) == "" {
+		return nil, apperrors.NewBadRequestError("content is required")
+	}
+
+	app := u.contextFactory()
+
+	a, err := app.Repositories.Assignment.Get(ctx, assignmentID)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.AssignmentGetError, err)
+	}
+	if a == nil {
+		return nil, apperrors.NewApplicationError(mappings.AssignmentNotFoundError, nil)
+	}
+
+	enrollment, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, a.CourseID, requesterID)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.EnrollmentGetError, err)
+	}
+	if enrollment == nil {
+		return nil, apperrors.NewApplicationError(mappings.SubmissionNotEnrolledError, nil)
+	}
+
+	if existing, err := app.Repositories.Submission.GetByAssignmentAndUser(ctx, assignmentID, requesterID); err != nil {
+		return nil, apperrors.NewApplicationError(mappings.SubmissionGetError, err)
+	} else if existing != nil {
+		return nil, apperrors.NewApplicationError(mappings.SubmissionAlreadyExistsError, nil)
+	}
+
+	id, err := app.Repositories.Submission.Create(ctx, domain.Submission{
+		AssignmentID: assignmentID,
+		UserID:       requesterID,
+		Content:      input.Content,
+	})
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.SubmissionCreateError, err)
+	}
+
+	created, err := app.Repositories.Submission.Get(ctx, id)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.SubmissionGetError, err)
+	}
+	if created == nil {
+		return nil, apperrors.NewInternalError(nil)
+	}
+
+	return &CreateOutput{Data: toSubmissionData(*created)}, nil
+}

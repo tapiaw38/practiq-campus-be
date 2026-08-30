@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	profileRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/profile"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/auth"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(profiles profileRepo.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -27,6 +28,11 @@ func AuthMiddleware() gin.HandlerFunc {
 		claims, err := auth.ValidateToken(parts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"code": "common:unauthorized", "message": "invalid token"})
+			c.Abort()
+			return
+		}
+		if profile, err := profiles.Get(c, claims.UserID); err == nil && profile != nil && profile.IsBlocked {
+			c.JSON(http.StatusForbidden, gin.H{"code": "profile:blocked", "message": "account is blocked in Campus"})
 			c.Abort()
 			return
 		}

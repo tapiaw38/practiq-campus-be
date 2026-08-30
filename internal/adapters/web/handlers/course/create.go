@@ -10,10 +10,12 @@ import (
 )
 
 type createInput struct {
-	Title       string  `json:"title" binding:"required"`
-	Description string  `json:"description"`
-	StartDate   *string `json:"start_date"`
-	EndDate     *string `json:"end_date"`
+	Title            string   `json:"title" binding:"required"`
+	Description      string   `json:"description"`
+	StartDate        *string  `json:"start_date"`
+	EndDate          *string  `json:"end_date"`
+	PractiqSubjectID *string  `json:"practiq_subject_id"`
+	Labels           []string `json:"labels"`
 }
 
 func parseDate(v *string) *time.Time {
@@ -37,10 +39,12 @@ func NewCreateHandler(uc ucCourse.CreateUsecase) gin.HandlerFunc {
 
 		userID := middlewares.GetUserID(c)
 		output, appErr := uc.Execute(c, userID, ucCourse.CreateInput{
-			Title:       input.Title,
-			Description: input.Description,
-			StartDate:   parseDate(input.StartDate),
-			EndDate:     parseDate(input.EndDate),
+			Title:            input.Title,
+			Description:      input.Description,
+			StartDate:        parseDate(input.StartDate),
+			EndDate:          parseDate(input.EndDate),
+			PractiqSubjectID: input.PractiqSubjectID,
+			Labels:           input.Labels,
 		})
 		if appErr != nil {
 			appErr.Log(c)

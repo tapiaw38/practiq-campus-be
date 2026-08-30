@@ -9,7 +9,10 @@ import (
 
 type Repository interface {
 	Create(context.Context, domain.CourseSection) (string, error)
+	Get(context.Context, string) (*domain.CourseSection, error)
 	ListByCourse(context.Context, string) ([]domain.CourseSection, error)
+	Update(context.Context, string, domain.CourseSection) error
+	Delete(context.Context, string) error
 }
 
 type repository struct {

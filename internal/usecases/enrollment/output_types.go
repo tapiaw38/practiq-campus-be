@@ -6,6 +6,7 @@ type EnrollmentData struct {
 	ID             string `json:"id"`
 	CourseID       string `json:"course_id"`
 	UserID         string `json:"user_id"`
+	UserName       string `json:"user_name"`
 	EnrollmentRole string `json:"enrollment_role"`
 	Status         string `json:"status"`
 	EnrolledAt     string `json:"enrolled_at"`
@@ -16,6 +17,7 @@ func toEnrollmentData(e domain.Enrollment) EnrollmentData {
 		ID:             e.ID,
 		CourseID:       e.CourseID,
 		UserID:         e.UserID,
+		UserName:       e.UserName,
 		EnrollmentRole: e.EnrollmentRole,
 		Status:         e.Status,
 		EnrolledAt:     e.EnrolledAt.Format("2006-01-02T15:04:05Z"),

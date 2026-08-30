@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/middlewares"
+	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	ucCourse "github.com/tapiaw38/practiq-campus-be/internal/usecases/course"
 )
 
@@ -13,7 +14,13 @@ func NewListHandler(uc ucCourse.ListUsecase) gin.HandlerFunc {
 		userID := middlewares.GetUserID(c)
 		isTeacher := middlewares.IsTeacher(c)
 
-		output, appErr := uc.Execute(c, userID, isTeacher)
+		var output *ucCourse.ListOutput
+		var appErr apperrors.ApplicationError
+		if c.Query("published_only") == "true" {
+			output, appErr = uc.ExecutePublished(c)
+		} else {
+			output, appErr = uc.Execute(c, userID, isTeacher)
+		}
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

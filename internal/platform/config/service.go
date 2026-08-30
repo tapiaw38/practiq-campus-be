@@ -18,15 +18,24 @@ func InitConfigService() {
 
 	configService = &Config{
 		ServerConfig: ServerConfig{
-			AppName:     getEnv("APP_NAME", "practiq-campus-be"),
-			Port:        getEnv("PORT", "8084"),
-			GinMode:     getEnv("GIN_MODE", "debug"),
-			JWTSecret:   jwtSecret,
-			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:5175"),
-			AuthAPIURL:  getEnv("AUTH_API_URL", "http://localhost:8082"),
+			AppName:       getEnv("APP_NAME", "practiq-campus-be"),
+			Port:          getEnv("PORT", "8084"),
+			GinMode:       getEnv("GIN_MODE", "debug"),
+			JWTSecret:     jwtSecret,
+			FrontendURL:   getEnv("FRONTEND_URL", "http://localhost:5175"),
+			AuthAPIURL:    getEnv("AUTH_API_URL", "http://localhost:8082"),
+			PractiqAPIURL: getEnv("PRACTIQ_API_URL", "http://localhost:8083"),
 		},
 		DatabaseConfig: DatabaseConfig{
 			DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:54324/practiq-campus-db?sslmode=disable"),
+		},
+		S3Config: S3Config{
+			AWSRegion:          getEnv("AWS_REGION", ""),
+			AWSBucket:          getEnv("AWS_BUCKET", ""),
+			AWSAccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
+			AWSSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
+			AWSSessionToken:    getEnv("AWS_SESSION_TOKEN", ""),
+			AWSEndpoint:        getEnv("AWS_ENDPOINT", ""),
 		},
 	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type createInput struct {
-	UserID         string `json:"user_id" binding:"required"`
+	Email          string `json:"email" binding:"required"`
 	EnrollmentRole string `json:"enrollment_role"`
 }
 
@@ -25,7 +25,7 @@ func NewCreateHandler(uc ucEnrollment.CreateUsecase) gin.HandlerFunc {
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucEnrollment.CreateInput{
-			UserID:         input.UserID,
+			Email:          input.Email,
 			EnrollmentRole: input.EnrollmentRole,
 		})
 		if appErr != nil {

@@ -10,6 +10,7 @@ import (
 
 type syncInput struct {
 	FullName string `json:"full_name"`
+	Email    string `json:"email"`
 }
 
 func NewSyncHandler(uc ucProfile.SyncUsecase) gin.HandlerFunc {
@@ -32,6 +33,8 @@ func NewSyncHandler(uc ucProfile.SyncUsecase) gin.HandlerFunc {
 			ID:          userID,
 			ProfileType: profileType,
 			FullName:    input.FullName,
+			Email:       input.Email,
+			BearerToken: c.GetHeader("Authorization"),
 		})
 		if appErr != nil {
 			appErr.Log(c)

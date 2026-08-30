@@ -22,6 +22,12 @@ type (
 		ID          string
 		ProfileType string
 		FullName    string
+		Email       string
+		// BearerToken is the caller's own "Bearer <jwt>" header, forwarded to
+		// practiq-be so a practiq "student" profile can override the
+		// auth-api-be-role-derived guess (e.g. someone with the global
+		// "admin" role who is still a plain student in practiq).
+		BearerToken string
 	}
 
 	SyncOutput struct {
@@ -36,10 +42,18 @@ func NewSyncUsecase(contextFactory appcontext.Factory) SyncUsecase {
 func (u *syncUsecase) Execute(ctx context.Context, input SyncInput) (*SyncOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
+	profileType := input.ProfileType
+	if practiqProfile, err := app.Integrations.PractiqAPI.GetProfile(ctx, input.BearerToken, input.ID); err == nil && practiqProfile != nil {
+		if practiqProfile.ProfileType == "student" {
+			profileType = "student"
+		}
+	}
+
 	p := domain.Profile{
 		ID:          input.ID,
-		ProfileType: input.ProfileType,
+		ProfileType: profileType,
 		FullName:    input.FullName,
+		Email:       input.Email,
 	}
 
 	if err := app.Repositories.Profile.Upsert(ctx, p); err != nil {

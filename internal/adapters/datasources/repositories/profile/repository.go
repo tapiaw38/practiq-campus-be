@@ -10,6 +10,10 @@ import (
 type Repository interface {
 	Upsert(context.Context, domain.Profile) error
 	Get(context.Context, string) (*domain.Profile, error)
+	GetByEmail(context.Context, string) (*domain.Profile, error)
+	ListByType(context.Context, string) ([]domain.Profile, error)
+	ListAll(context.Context, string, int, int) ([]domain.Profile, int, error)
+	SetBlocked(context.Context, string, bool) error
 }
 
 type repository struct {
