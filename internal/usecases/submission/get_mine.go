@@ -46,5 +46,6 @@ func (u *getMineUsecase) Execute(ctx context.Context, requesterID, assignmentID 
 		return nil, apperrors.NewInternalError(err)
 	}
 	data = withRubricScores(data, scores)
+	data = withAttachments(app, data)
 	return &GetMineOutput{Data: &data}, nil
 }

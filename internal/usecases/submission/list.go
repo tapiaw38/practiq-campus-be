@@ -58,7 +58,7 @@ func (u *listByAssignmentUsecase) Execute(ctx context.Context, requesterID strin
 		if err != nil {
 			return nil, apperrors.NewInternalError(err)
 		}
-		data[i] = withRubricScores(data[i], scores)
+		data[i] = withAttachments(app, withRubricScores(data[i], scores))
 	}
 	return &ListOutput{Data: data}, nil
 }

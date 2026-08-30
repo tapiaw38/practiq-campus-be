@@ -74,7 +74,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID s
 		if err != nil || updated == nil {
 			return nil, apperrors.NewApplicationError(mappings.SubmissionGetError, err)
 		}
-		return &CreateOutput{Data: toSubmissionData(*updated)}, nil
+		return &CreateOutput{Data: withAttachments(app, toSubmissionData(*updated))}, nil
 	}
 
 	id, err := app.Repositories.Submission.Create(ctx, domain.Submission{
@@ -97,5 +97,5 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID s
 		_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: course.OwnerID, Type: "submission_created", Title: "Nueva entrega", Body: a.Title, Data: `{"submission_id":"` + created.ID + `","assignment_id":"` + assignmentID + `"}`})
 	}
 
-	return &CreateOutput{Data: toSubmissionData(*created)}, nil
+	return &CreateOutput{Data: withAttachments(app, toSubmissionData(*created))}, nil
 }
