@@ -119,5 +119,5 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
 	}
-	return &GradeOutput{Data: withRubricScores(data, scores)}, nil
+	return &GradeOutput{Data: withAttachments(app, withRubricScores(data, scores))}, nil
 }
