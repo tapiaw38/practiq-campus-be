@@ -11,7 +11,7 @@ import (
 type UpdateUsecase interface {
 	Execute(context.Context, string, bool, string, UpdateInput) (*UpdateOutput, apperrors.ApplicationError)
 }
-type UpdateInput struct{ Title string }
+type UpdateInput struct{ Title, Description string }
 type UpdateOutput struct {
 	Data SectionData `json:"data"`
 }
@@ -34,6 +34,7 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 		return nil, x
 	}
 	s.Title = in.Title
+	s.Description = in.Description
 	if e = a.Repositories.CourseSection.Update(ctx, id, *s); e != nil {
 		return nil, apperrors.NewApplicationError(mappings.SectionGetError, e)
 	}

@@ -9,7 +9,8 @@ import (
 )
 
 type createInput struct {
-	Title string `json:"title" binding:"required"`
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
 }
 
 func NewCreateHandler(uc ucSection.CreateUsecase) gin.HandlerFunc {
@@ -23,7 +24,7 @@ func NewCreateHandler(uc ucSection.CreateUsecase) gin.HandlerFunc {
 
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucSection.CreateInput{Title: input.Title})
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucSection.CreateInput{Title: input.Title, Description: input.Description})
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

@@ -14,7 +14,7 @@ func NewUpdateHandler(u uc.UpdateUsecase) gin.HandlerFunc {
 			c.JSON(400, gin.H{"message": "invalid body"})
 			return
 		}
-		o, e := u.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"), uc.UpdateInput{Title: in.Title})
+		o, e := u.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"), uc.UpdateInput{Title: in.Title, Description: in.Description})
 		if e != nil {
 			e.Log(c)
 			c.JSON(e.StatusCode(), e)

@@ -8,12 +8,14 @@ import (
 )
 
 const selectQuizColumns = `
-	id, course_id, section_id, title, description, time_limit_secs, max_attempts, scheduled_at, available_until, created_at, updated_at
+	id, course_id, section_id, title, description, time_limit_secs, max_attempts, scheduled_at, available_until, created_at, updated_at,
+	(SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = quizzes.id),
+	weight, visible_group_id, unlock_after_type, unlock_after_id
 `
 
 func scanQuiz(row *sql.Row) (*domain.Quiz, error) {
 	var q domain.Quiz
-	err := row.Scan(&q.ID, &q.CourseID, &q.SectionID, &q.Title, &q.Description, &q.TimeLimitSecs, &q.MaxAttempts, &q.ScheduledAt, &q.AvailableUntil, &q.CreatedAt, &q.UpdatedAt)
+	err := row.Scan(&q.ID, &q.CourseID, &q.SectionID, &q.Title, &q.Description, &q.TimeLimitSecs, &q.MaxAttempts, &q.ScheduledAt, &q.AvailableUntil, &q.CreatedAt, &q.UpdatedAt, &q.QuestionCount, &q.Weight, &q.VisibleGroupID, &q.UnlockAfterType, &q.UnlockAfterID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

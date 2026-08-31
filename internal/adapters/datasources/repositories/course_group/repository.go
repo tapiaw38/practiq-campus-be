@@ -15,6 +15,7 @@ type Repository interface {
 
 	AddMember(ctx context.Context, groupID, userID string) error
 	RemoveMember(ctx context.Context, groupID, userID string) error
+	IsMember(ctx context.Context, groupID, userID string) (bool, error)
 }
 
 type repository struct {

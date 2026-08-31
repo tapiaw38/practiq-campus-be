@@ -26,6 +26,15 @@ type Quiz struct {
 	AvailableUntil *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// QuestionCount is populated only by ListByCourse, for the card the
+	// teacher sees before opening a quiz — it is never a stored column.
+	QuestionCount int
+	// Weight, VisibleGroupID, UnlockAfterType/UnlockAfterID mirror
+	// Assignment's fields of the same name — see there for what each means.
+	Weight          int
+	VisibleGroupID  *string
+	UnlockAfterType *string
+	UnlockAfterID   *string
 }
 
 type QuizQuestion struct {

@@ -10,11 +10,15 @@ import (
 )
 
 type createInput struct {
-	SectionID   *string `json:"section_id"`
-	Title       string  `json:"title" binding:"required"`
-	Description string  `json:"description"`
-	DueAt       *string `json:"due_at"`
-	MaxScore    int     `json:"max_score"`
+	SectionID       *string `json:"section_id"`
+	Title           string  `json:"title" binding:"required"`
+	Description     string  `json:"description"`
+	DueAt           *string `json:"due_at"`
+	MaxScore        int     `json:"max_score"`
+	Weight          int     `json:"weight"`
+	VisibleGroupID  *string `json:"visible_group_id"`
+	UnlockAfterType *string `json:"unlock_after_type"`
+	UnlockAfterID   *string `json:"unlock_after_id"`
 }
 
 func parseDateTime(v *string) *time.Time {
@@ -40,11 +44,15 @@ func NewCreateHandler(uc ucAssignment.CreateUsecase) gin.HandlerFunc {
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucAssignment.CreateInput{
-			SectionID:   input.SectionID,
-			Title:       input.Title,
-			Description: input.Description,
-			DueAt:       parseDateTime(input.DueAt),
-			MaxScore:    input.MaxScore,
+			SectionID:       input.SectionID,
+			Title:           input.Title,
+			Description:     input.Description,
+			DueAt:           parseDateTime(input.DueAt),
+			MaxScore:        input.MaxScore,
+			Weight:          input.Weight,
+			VisibleGroupID:  input.VisibleGroupID,
+			UnlockAfterType: input.UnlockAfterType,
+			UnlockAfterID:   input.UnlockAfterID,
 		})
 		if appErr != nil {
 			appErr.Log(c)

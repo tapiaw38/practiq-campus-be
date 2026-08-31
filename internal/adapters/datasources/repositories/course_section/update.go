@@ -6,7 +6,7 @@ import (
 )
 
 func (r *repository) Update(ctx context.Context, id string, s domain.CourseSection) error {
-	_, e := r.db.ExecContext(ctx, `UPDATE course_sections SET title=$1, position=$2, updated_at=now() WHERE id=$3`, s.Title, s.Position, id)
+	_, e := r.db.ExecContext(ctx, `UPDATE course_sections SET title=$1, description=$2, position=$3, updated_at=now() WHERE id=$4`, s.Title, s.Description, s.Position, id)
 	return e
 }
 func (r *repository) Delete(ctx context.Context, id string) error {

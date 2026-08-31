@@ -20,7 +20,8 @@ type (
 	}
 
 	CreateInput struct {
-		Title string
+		Title       string
+		Description string
 	}
 
 	CreateOutput struct {
@@ -49,9 +50,10 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	}
 
 	id, err := app.Repositories.CourseSection.Create(ctx, domain.CourseSection{
-		CourseID: courseID,
-		Title:    input.Title,
-		Position: len(existing) + 1,
+		CourseID:    courseID,
+		Title:       input.Title,
+		Description: input.Description,
+		Position:    len(existing) + 1,
 	})
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.SectionCreateError, err)

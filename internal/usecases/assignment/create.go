@@ -9,6 +9,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/unlock"
 )
 
 type (
@@ -21,11 +22,15 @@ type (
 	}
 
 	CreateInput struct {
-		SectionID   *string
-		Title       string
-		Description string
-		DueAt       *time.Time
-		MaxScore    int
+		SectionID       *string
+		Title           string
+		Description     string
+		DueAt           *time.Time
+		MaxScore        int
+		Weight          int
+		VisibleGroupID  *string
+		UnlockAfterType *string
+		UnlockAfterID   *string
 	}
 
 	CreateOutput struct {
@@ -47,19 +52,33 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if appErr := requesterOwnsCourse(ctx, app, requesterID, isSuperAdmin, courseID); appErr != nil {
 		return nil, appErr
 	}
+	if appErr := validateVisibleGroup(ctx, app, courseID, input.VisibleGroupID); appErr != nil {
+		return nil, appErr
+	}
+	if appErr := validateUnlockTarget(ctx, app, courseID, "", input.UnlockAfterType, input.UnlockAfterID); appErr != nil {
+		return nil, appErr
+	}
 
 	maxScore := input.MaxScore
 	if maxScore <= 0 {
 		maxScore = 100
 	}
+	weight := input.Weight
+	if weight <= 0 {
+		weight = 100
+	}
 
 	id, err := app.Repositories.Assignment.Create(ctx, domain.Assignment{
-		CourseID:    courseID,
-		SectionID:   input.SectionID,
-		Title:       input.Title,
-		Description: input.Description,
-		DueAt:       input.DueAt,
-		MaxScore:    maxScore,
+		CourseID:        courseID,
+		SectionID:       input.SectionID,
+		Title:           input.Title,
+		Description:     input.Description,
+		DueAt:           input.DueAt,
+		MaxScore:        maxScore,
+		Weight:          weight,
+		VisibleGroupID:  input.VisibleGroupID,
+		UnlockAfterType: input.UnlockAfterType,
+		UnlockAfterID:   input.UnlockAfterID,
 	})
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.AssignmentCreateError, err)
@@ -78,5 +97,5 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		}
 	}
 
-	return &CreateOutput{Data: toAssignmentData(*created)}, nil
+	return &CreateOutput{Data: toAssignmentData(*created, unlock.Status{})}, nil
 }

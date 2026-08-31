@@ -17,7 +17,7 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 	quizzes := make([]domain.Quiz, 0)
 	for rows.Next() {
 		var q domain.Quiz
-		if err := rows.Scan(&q.ID, &q.CourseID, &q.SectionID, &q.Title, &q.Description, &q.TimeLimitSecs, &q.MaxAttempts, &q.ScheduledAt, &q.AvailableUntil, &q.CreatedAt, &q.UpdatedAt); err != nil {
+		if err := rows.Scan(&q.ID, &q.CourseID, &q.SectionID, &q.Title, &q.Description, &q.TimeLimitSecs, &q.MaxAttempts, &q.ScheduledAt, &q.AvailableUntil, &q.CreatedAt, &q.UpdatedAt, &q.QuestionCount, &q.Weight, &q.VisibleGroupID, &q.UnlockAfterType, &q.UnlockAfterID); err != nil {
 			return nil, err
 		}
 		quizzes = append(quizzes, q)

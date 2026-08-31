@@ -8,7 +8,7 @@ import (
 
 func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domain.CourseSection, error) {
 	query := `
-		SELECT id, course_id, title, position, created_at, updated_at
+		SELECT id, course_id, title, description, position, created_at, updated_at
 		FROM course_sections
 		WHERE course_id = $1
 		ORDER BY position ASC, created_at ASC
@@ -22,7 +22,7 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 	var sections []domain.CourseSection
 	for rows.Next() {
 		var s domain.CourseSection
-		if err := rows.Scan(&s.ID, &s.CourseID, &s.Title, &s.Position, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.CourseID, &s.Title, &s.Description, &s.Position, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		sections = append(sections, s)

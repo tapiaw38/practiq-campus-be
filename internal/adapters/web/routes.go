@@ -53,6 +53,7 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	// Courses.
 	teacherOnly.POST("/courses", handlerCourse.NewCreateHandler(uc.Course.Create))
 	teacherOnly.POST("/courses/sync-from-practiq", handlerCourse.NewSyncFromPractiqHandler(uc.Course.SyncFromPractiq))
+	teacherOnly.POST("/courses/:id/duplicate", handlerCourse.NewDuplicateHandler(uc.Course.Duplicate))
 	api.GET("/courses", handlerCourse.NewListHandler(uc.Course.List))
 	api.GET("/courses/:id", handlerCourse.NewGetHandler(uc.Course.Get))
 	teacherOnly.PUT("/courses/:id", handlerCourse.NewUpdateHandler(uc.Course.Update))

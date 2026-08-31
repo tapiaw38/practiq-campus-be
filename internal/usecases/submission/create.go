@@ -9,6 +9,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/unlock"
 )
 
 type (
@@ -56,6 +57,20 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID s
 	}
 	if enrollment == nil {
 		return nil, apperrors.NewApplicationError(mappings.SubmissionNotEnrolledError, nil)
+	}
+	if a.VisibleGroupID != nil {
+		member, err := app.Repositories.CourseGroup.IsMember(ctx, *a.VisibleGroupID, requesterID)
+		if err != nil {
+			return nil, apperrors.NewInternalError(err)
+		}
+		if !member {
+			return nil, apperrors.NewForbiddenError()
+		}
+	}
+	if status, err := unlock.Check(ctx, app.Repositories, a.UnlockAfterType, a.UnlockAfterID, requesterID); err != nil {
+		return nil, apperrors.NewInternalError(err)
+	} else if status.Locked {
+		return nil, apperrors.NewBadRequestError(status.Reason)
 	}
 
 	if existing, err := app.Repositories.Submission.GetByAssignmentAndUser(ctx, assignmentID, requesterID); err != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/unlock"
 )
 
 type (
@@ -37,5 +38,5 @@ func (u *getUsecase) Execute(ctx context.Context, id string) (*GetOutput, apperr
 		return nil, apperrors.NewApplicationError(mappings.QuizNotFoundError, nil)
 	}
 
-	return &GetOutput{Data: toQuizData(*q)}, nil
+	return &GetOutput{Data: toQuizData(*q, unlock.Status{})}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/unlock"
 )
 
 type (
@@ -20,13 +21,17 @@ type (
 	}
 
 	UpdateInput struct {
-		SectionID      *string
-		Title          string
-		Description    string
-		TimeLimitSecs  *int
-		MaxAttempts    int
-		ScheduledAt    *time.Time
-		AvailableUntil *time.Time
+		SectionID       *string
+		Title           string
+		Description     string
+		TimeLimitSecs   *int
+		MaxAttempts     int
+		ScheduledAt     *time.Time
+		AvailableUntil  *time.Time
+		Weight          int
+		VisibleGroupID  *string
+		UnlockAfterType *string
+		UnlockAfterID   *string
 	}
 
 	UpdateOutput struct {
@@ -55,10 +60,20 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if appErr := requesterOwnsCourse(ctx, app, requesterID, isSuperAdmin, existing.CourseID); appErr != nil {
 		return nil, appErr
 	}
+	if appErr := validateVisibleGroup(ctx, app, existing.CourseID, input.VisibleGroupID); appErr != nil {
+		return nil, appErr
+	}
+	if appErr := validateUnlockTarget(ctx, app, existing.CourseID, id, input.UnlockAfterType, input.UnlockAfterID); appErr != nil {
+		return nil, appErr
+	}
 
 	maxAttempts := input.MaxAttempts
 	if maxAttempts < 0 {
 		maxAttempts = 1
+	}
+	weight := input.Weight
+	if weight <= 0 {
+		weight = 100
 	}
 
 	existing.SectionID = input.SectionID
@@ -68,10 +83,14 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	existing.MaxAttempts = maxAttempts
 	existing.ScheduledAt = input.ScheduledAt
 	existing.AvailableUntil = input.AvailableUntil
+	existing.Weight = weight
+	existing.VisibleGroupID = input.VisibleGroupID
+	existing.UnlockAfterType = input.UnlockAfterType
+	existing.UnlockAfterID = input.UnlockAfterID
 
 	if err = app.Repositories.Quiz.Update(ctx, id, *existing); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.QuizGetError, err)
 	}
 
-	return &UpdateOutput{Data: toQuizData(*existing)}, nil
+	return &UpdateOutput{Data: toQuizData(*existing, unlock.Status{})}, nil
 }

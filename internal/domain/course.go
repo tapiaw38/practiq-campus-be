@@ -32,10 +32,11 @@ type Course struct {
 }
 
 type CourseSection struct {
-	ID        string
-	CourseID  string
-	Title     string
-	Position  int
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          string
+	CourseID    string
+	Title       string
+	Description string
+	Position    int
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

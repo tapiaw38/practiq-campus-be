@@ -43,6 +43,7 @@ type CourseUsecases struct {
 	Update          ucCourse.UpdateUsecase
 	Delete          ucCourse.DeleteUsecase
 	SyncFromPractiq ucCourse.SyncFromPractiqUsecase
+	Duplicate       ucCourse.DuplicateUsecase
 }
 
 type EnrollmentUsecases struct {
@@ -174,6 +175,7 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			Update:          ucCourse.NewUpdateUsecase(contextFactory),
 			Delete:          ucCourse.NewDeleteUsecase(contextFactory),
 			SyncFromPractiq: ucCourse.NewSyncFromPractiqUsecase(contextFactory),
+			Duplicate:       ucCourse.NewDuplicateUsecase(contextFactory),
 		},
 		Enrollment: EnrollmentUsecases{
 			Create:       ucEnrollment.NewCreateUsecase(contextFactory),

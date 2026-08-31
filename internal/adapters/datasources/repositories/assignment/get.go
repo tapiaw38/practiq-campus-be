@@ -8,14 +8,15 @@ import (
 )
 
 const selectAssignmentColumns = `
-	id, course_id, section_id, title, description, due_at, max_score, created_at, updated_at
+	id, course_id, section_id, title, description, due_at, max_score, created_at, updated_at,
+	weight, visible_group_id, unlock_after_type, unlock_after_id
 `
 
 func (r *repository) Get(ctx context.Context, id string) (*domain.Assignment, error) {
 	row := r.db.QueryRowContext(ctx, "SELECT "+selectAssignmentColumns+" FROM assignments WHERE id = $1", id)
 
 	var a domain.Assignment
-	err := row.Scan(&a.ID, &a.CourseID, &a.SectionID, &a.Title, &a.Description, &a.DueAt, &a.MaxScore, &a.CreatedAt, &a.UpdatedAt)
+	err := row.Scan(&a.ID, &a.CourseID, &a.SectionID, &a.Title, &a.Description, &a.DueAt, &a.MaxScore, &a.CreatedAt, &a.UpdatedAt, &a.Weight, &a.VisibleGroupID, &a.UnlockAfterType, &a.UnlockAfterID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
