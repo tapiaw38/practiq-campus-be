@@ -21,6 +21,7 @@ type (
 	CreateInput struct {
 		Email          string
 		EnrollmentRole string
+		BearerToken    string
 	}
 
 	CreateOutput struct {
@@ -43,7 +44,14 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		return nil, appErr
 	}
 
-	student, err := app.Repositories.Profile.GetByEmail(ctx, input.Email)
+	authUser, err := app.Integrations.AuthAPI.GetByEmail(ctx, input.BearerToken, input.Email)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+	if authUser == nil {
+		return nil, apperrors.NewApplicationError(mappings.EnrollmentStudentNotFoundError, nil)
+	}
+	student, err := app.Repositories.Profile.Get(ctx, authUser.Username)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
 	}

@@ -6,11 +6,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
 	ListByQuizUsecase interface {
-		Execute(ctx context.Context, requesterID string, isSuperAdmin bool, quizID string) (*ListOutput, apperrors.ApplicationError)
+		Execute(ctx context.Context, requesterID string, isSuperAdmin bool, quizID, bearerToken string) (*ListOutput, apperrors.ApplicationError)
 	}
 
 	listByQuizUsecase struct {
@@ -22,7 +23,7 @@ func NewListByQuizUsecase(contextFactory appcontext.Factory) ListByQuizUsecase {
 	return &listByQuizUsecase{contextFactory: contextFactory}
 }
 
-func (u *listByQuizUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, quizID string) (*ListOutput, apperrors.ApplicationError) {
+func (u *listByQuizUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, quizID, bearerToken string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
 	q, err := app.Repositories.Quiz.Get(ctx, quizID)
@@ -46,5 +47,18 @@ func (u *listByQuizUsecase) Execute(ctx context.Context, requesterID string, isS
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
 	}
+
+	ids := make([]string, 0, len(attempts))
+	for _, a := range attempts {
+		ids = append(ids, a.UserID)
+	}
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, ids)
+	if err != nil {
+		return nil, apperrors.NewInternalError(err)
+	}
+	for i, a := range attempts {
+		attempts[i].UserName = identity.FullName(names[a.UserID], a.UserID)
+	}
+
 	return &ListOutput{Data: toAttemptDataList(attempts)}, nil
 }

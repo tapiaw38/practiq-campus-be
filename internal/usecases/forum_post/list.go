@@ -7,11 +7,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
 	ListUsecase interface {
-		Execute(context.Context, string, bool, string, repo.ListOptions) (*ListOutput, apperrors.ApplicationError)
+		Execute(ctx context.Context, requesterID string, isSuperAdmin bool, threadID string, options repo.ListOptions, bearerToken string) (*ListOutput, apperrors.ApplicationError)
 	}
 
 	listUsecase struct {
@@ -28,7 +29,7 @@ func NewListUsecase(contextFactory appcontext.Factory) ListUsecase {
 	return &listUsecase{contextFactory: contextFactory}
 }
 
-func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, threadID string, options repo.ListOptions) (*ListOutput, apperrors.ApplicationError) {
+func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, threadID string, options repo.ListOptions, bearerToken string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
 	if _, appErr := requesterCanAccessThread(ctx, app, requesterID, isSuperAdmin, threadID); appErr != nil {
@@ -38,6 +39,18 @@ func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAd
 	posts, err := app.Repositories.ForumPost.ListByThread(ctx, threadID, options)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.PostListError, err)
+	}
+
+	ids := make([]string, 0, len(posts))
+	for _, p := range posts {
+		ids = append(ids, p.AuthorID)
+	}
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, ids)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.PostListError, err)
+	}
+	for i, p := range posts {
+		posts[i].AuthorName = identity.FullName(names[p.AuthorID], p.AuthorID)
 	}
 
 	rootCount, err := app.Repositories.ForumPost.CountRootsByThread(ctx, threadID)

@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"strings"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/authapi"
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
@@ -37,24 +38,19 @@ func NewProvisionStudentUsecase(contextFactory appcontext.Factory) CreateOrSyncU
 }
 
 // Execute is superadmin-only. Three paths:
-//  1. A campus_profiles row for this email already exists — return it as-is,
+//  1. The email already has a shared identity on auth-api-be, and a
+//     campus_profiles row for that user already exists — return it as-is,
 //     nothing to do.
-//  2. The email already has a shared identity on auth-api-be — reuse it (no
-//     new password, no register call). profile_type is derived from that
-//     account's auth-api-be roles; when it resolves to "student", it also
-//     asks practiq-be for that same user's practiq profile to reuse its
-//     display name if practiq-be already has one (student case only, per
-//     scope — teacher-in-practiq reconciliation is a later problem).
+//  2. The email already has a shared identity on auth-api-be but no local
+//     row yet — reuse it (no new password, no register call). profile_type
+//     is derived from that account's auth-api-be roles; when it resolves to
+//     "student", it also asks practiq-be for that same user's practiq
+//     profile type to override the guess (student case only, per scope —
+//     teacher-in-practiq reconciliation is a later problem).
 //  3. Brand-new email — requires first_name/last_name/password and goes
 //     through the normal auth-api-be register flow.
 func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyncUserInput) (*SyncOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
-
-	if existing, err := app.Repositories.Profile.GetByEmail(ctx, input.Email); err != nil {
-		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
-	} else if existing != nil {
-		return &SyncOutput{Data: toProfileData(*existing)}, nil
-	}
 
 	authUser, err := app.Integrations.AuthAPI.GetByEmail(ctx, input.BearerToken, input.Email)
 	if err != nil {
@@ -70,7 +66,14 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 		// same identifier or the two paths create separate rows for the
 		// same person.
 		id = authUser.Username
-		fullName = (authUser.FirstName + " " + authUser.LastName)
+
+		if existing, err := app.Repositories.Profile.Get(ctx, id); err != nil {
+			return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+		} else if existing != nil {
+			return &SyncOutput{Data: toProfileData(*existing, strings.TrimSpace(authUser.FirstName+" "+authUser.LastName), authUser.Email)}, nil
+		}
+
+		fullName = authUser.FirstName + " " + authUser.LastName
 		profileType = "student"
 		for _, role := range authUser.Roles {
 			if role == "admin" || role == "superadmin" {
@@ -86,9 +89,6 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 		if practiqProfile, err := app.Integrations.PractiqAPI.GetProfile(ctx, input.BearerToken, id); err == nil && practiqProfile != nil {
 			if practiqProfile.ProfileType == "student" {
 				profileType = "student"
-				if practiqProfile.Name != "" {
-					fullName = practiqProfile.Name
-				}
 			}
 		}
 	} else {
@@ -114,8 +114,6 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 	p := domain.Profile{
 		ID:          id,
 		ProfileType: profileType,
-		FullName:    fullName,
-		Email:       input.Email,
 	}
 	if err := app.Repositories.Profile.Upsert(ctx, p); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.ProfileSyncError, err)
@@ -129,5 +127,5 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 		return nil, apperrors.NewInternalError(nil)
 	}
 
-	return &SyncOutput{Data: toProfileData(*created)}, nil
+	return &SyncOutput{Data: toProfileData(*created, fullName, input.Email)}, nil
 }

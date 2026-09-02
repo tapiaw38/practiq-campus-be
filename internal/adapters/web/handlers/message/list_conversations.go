@@ -11,7 +11,7 @@ import (
 func NewListConversationsHandler(uc ucMessage.ListConversationsUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := middlewares.GetUserID(c)
-		output, appErr := uc.Execute(c, userID)
+		output, appErr := uc.Execute(c, userID, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

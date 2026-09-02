@@ -27,6 +27,7 @@ func NewCreateHandler(uc ucEnrollment.CreateUsecase) gin.HandlerFunc {
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, ucEnrollment.CreateInput{
 			Email:          input.Email,
 			EnrollmentRole: input.EnrollmentRole,
+			BearerToken:    c.GetHeader("Authorization"),
 		})
 		if appErr != nil {
 			appErr.Log(c)

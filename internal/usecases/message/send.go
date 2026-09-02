@@ -24,9 +24,10 @@ type (
 		// a concrete person via search first, so it should never need to
 		// re-derive identity from an email string. ToEmail stays as a
 		// fallback for any other caller.
-		ToUserID string
-		ToEmail  string
-		Body     string
+		ToUserID    string
+		ToEmail     string
+		Body        string
+		BearerToken string
 	}
 
 	SendOutput struct {
@@ -75,7 +76,14 @@ func (u *sendUsecase) Execute(ctx context.Context, requesterID string, input Sen
 		}
 		recipientID = recipient.ID
 	} else {
-		recipient, err := app.Repositories.Profile.GetByEmail(ctx, input.ToEmail)
+		authUser, err := app.Integrations.AuthAPI.GetByEmail(ctx, input.BearerToken, input.ToEmail)
+		if err != nil {
+			return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+		}
+		if authUser == nil {
+			return nil, apperrors.NewApplicationError(mappings.MessageRecipientNotFoundError, nil)
+		}
+		recipient, err := app.Repositories.Profile.Get(ctx, authUser.Username)
 		if err != nil {
 			return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
 		}

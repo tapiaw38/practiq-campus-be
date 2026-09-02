@@ -11,7 +11,7 @@ import (
 func NewListStudentsHandler(uc ucProfile.ListStudentsUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-		output, appErr := uc.Execute(c, ucProfile.ListStudentsInput{Search: c.Query("search"), Page: page, PerPage: 20})
+		output, appErr := uc.Execute(c, ucProfile.ListStudentsInput{Search: c.Query("search"), Page: page, PerPage: 20, BearerToken: c.GetHeader("Authorization")})
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

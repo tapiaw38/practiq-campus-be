@@ -6,11 +6,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
 	ListByCourseUsecase interface {
-		Execute(context.Context, string, bool, string) (*ListOutput, apperrors.ApplicationError)
+		Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, bearerToken string) (*ListOutput, apperrors.ApplicationError)
 	}
 	ListMineUsecase interface {
 		Execute(context.Context, string) (*ListOutput, apperrors.ApplicationError)
@@ -36,7 +37,7 @@ func NewListMineUsecase(contextFactory appcontext.Factory) ListMineUsecase {
 	return &listMineUsecase{contextFactory: contextFactory}
 }
 
-func (u *listByCourseUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string) (*ListOutput, apperrors.ApplicationError) {
+func (u *listByCourseUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, bearerToken string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
 	if appErr := requesterOwnsCourse(ctx, app, requesterID, isSuperAdmin, courseID); appErr != nil {
@@ -46,6 +47,18 @@ func (u *listByCourseUsecase) Execute(ctx context.Context, requesterID string, i
 	enrollments, err := app.Repositories.Enrollment.ListByCourse(ctx, courseID)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentListError, err)
+	}
+
+	ids := make([]string, 0, len(enrollments))
+	for _, e := range enrollments {
+		ids = append(ids, e.UserID)
+	}
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, ids)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+	for i, e := range enrollments {
+		enrollments[i].UserName = identity.FullName(names[e.UserID], e.UserID)
 	}
 
 	return &ListOutput{Data: toEnrollmentDataList(enrollments)}, nil

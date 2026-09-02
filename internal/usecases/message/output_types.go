@@ -42,10 +42,12 @@ type ConversationData struct {
 	Unread              bool    `json:"unread"`
 }
 
-func toConversationData(s conversation.ConversationSummary, otherProfile *domain.Profile) ConversationData {
+func toConversationData(s conversation.ConversationSummary, otherUserName, otherUserEmail string) ConversationData {
 	data := ConversationData{
 		ID:                  s.ID,
 		OtherUserID:         s.OtherUserID,
+		OtherUserName:       otherUserName,
+		OtherUserEmail:      otherUserEmail,
 		LastMessageBody:     s.LastMessageBody,
 		LastMessageSenderID: s.LastMessageSenderID,
 		Unread:              s.Unread,
@@ -53,10 +55,6 @@ func toConversationData(s conversation.ConversationSummary, otherProfile *domain
 	if s.LastMessageAt != nil {
 		v := s.LastMessageAt.Format("2006-01-02T15:04:05Z")
 		data.LastMessageAt = &v
-	}
-	if otherProfile != nil {
-		data.OtherUserName = otherProfile.FullName
-		data.OtherUserEmail = otherProfile.Email
 	}
 	return data
 }

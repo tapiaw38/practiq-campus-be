@@ -23,7 +23,7 @@ func NewListHandler(uc ucPost.ListUsecase) gin.HandlerFunc {
 			options.Offset = value
 		}
 
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, threadID, options)
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, threadID, options, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

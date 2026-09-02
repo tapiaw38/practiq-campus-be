@@ -14,7 +14,7 @@ func NewListByAssignmentHandler(uc ucSubmission.ListByAssignmentUsecase) gin.Han
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
 
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, assignmentID)
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, assignmentID, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

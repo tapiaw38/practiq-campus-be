@@ -15,7 +15,7 @@ func NewSearchRecipientsHandler(uc ucMessage.SearchRecipientsUsecase) gin.Handle
 
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, query)
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, query, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

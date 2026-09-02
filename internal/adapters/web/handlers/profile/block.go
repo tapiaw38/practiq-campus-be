@@ -19,7 +19,7 @@ func NewBlockHandler(uc ucProfile.BlockUsecase) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"code": "common:bad-request", "message": "invalid request body"})
 			return
 		}
-		output, appErr := uc.Execute(c, middlewares.GetUserID(c), c.Param("id"), input.Blocked)
+		output, appErr := uc.Execute(c, middlewares.GetUserID(c), c.Param("id"), input.Blocked, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

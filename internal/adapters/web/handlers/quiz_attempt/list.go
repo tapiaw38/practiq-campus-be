@@ -22,7 +22,7 @@ func NewListMineHandler(uc ucQuizAttempt.ListMineUsecase) gin.HandlerFunc {
 
 func NewListByQuizHandler(uc ucQuizAttempt.ListByQuizUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		output, appErr := uc.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"))
+		output, appErr := uc.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"), c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

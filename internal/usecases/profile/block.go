@@ -6,10 +6,11 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type BlockUsecase interface {
-	Execute(context.Context, string, string, bool) (*BlockOutput, apperrors.ApplicationError)
+	Execute(ctx context.Context, requesterID, userID string, blocked bool, bearerToken string) (*BlockOutput, apperrors.ApplicationError)
 }
 type BlockOutput struct {
 	Data ProfileData `json:"data"`
@@ -19,7 +20,7 @@ type blockUsecase struct{ contextFactory appcontext.Factory }
 func NewBlockUsecase(contextFactory appcontext.Factory) BlockUsecase {
 	return &blockUsecase{contextFactory: contextFactory}
 }
-func (u *blockUsecase) Execute(ctx context.Context, requesterID, userID string, blocked bool) (*BlockOutput, apperrors.ApplicationError) {
+func (u *blockUsecase) Execute(ctx context.Context, requesterID, userID string, blocked bool, bearerToken string) (*BlockOutput, apperrors.ApplicationError) {
 	if requesterID == userID {
 		return nil, apperrors.NewBadRequestError("cannot block yourself")
 	}
@@ -35,5 +36,12 @@ func (u *blockUsecase) Execute(ctx context.Context, requesterID, userID string, 
 		return nil, apperrors.NewApplicationError(mappings.ProfileSyncError, err)
 	}
 	profile.IsBlocked = blocked
-	return &BlockOutput{Data: toProfileData(*profile)}, nil
+
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, []string{userID})
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+	info := names[userID]
+
+	return &BlockOutput{Data: toProfileData(*profile, identity.FullName(info, userID), info.Email)}, nil
 }

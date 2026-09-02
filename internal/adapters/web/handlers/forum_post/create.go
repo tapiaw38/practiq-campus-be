@@ -24,7 +24,7 @@ func NewCreateHandler(uc ucPost.CreateUsecase) gin.HandlerFunc {
 
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, threadID, ucPost.CreateInput{Body: input.Body, ParentID: input.ParentID})
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, threadID, ucPost.CreateInput{Body: input.Body, ParentID: input.ParentID, BearerToken: c.GetHeader("Authorization")})
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

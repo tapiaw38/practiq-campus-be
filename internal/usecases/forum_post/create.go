@@ -8,6 +8,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
@@ -20,8 +21,9 @@ type (
 	}
 
 	CreateInput struct {
-		Body     string
-		ParentID *string
+		Body        string
+		ParentID    *string
+		BearerToken string
 	}
 
 	CreateOutput struct {
@@ -70,6 +72,12 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if created == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
+
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, input.BearerToken, []string{created.AuthorID})
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.PostListError, err)
+	}
+	created.AuthorName = identity.FullName(names[created.AuthorID], created.AuthorID)
 
 	return &CreateOutput{Data: toPostData(*created)}, nil
 }

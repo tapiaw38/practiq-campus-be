@@ -59,26 +59,11 @@ func scanAttempts(rows *sql.Rows) ([]domain.QuizAttempt, error) {
 }
 
 func (r *repository) ListByQuiz(ctx context.Context, quizID string) ([]domain.QuizAttempt, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT a.id, a.quiz_id, a.user_id, COALESCE(p.full_name, a.user_id), a.attempt_number, a.started_at, a.submitted_at, a.score, a.max_score
-		FROM quiz_attempts a
-		LEFT JOIN campus_profiles p ON p.id = a.user_id
-		WHERE a.quiz_id=$1 ORDER BY a.started_at DESC
-	`, quizID)
+	rows, err := r.db.QueryContext(ctx, "SELECT "+selectAttemptColumns+" FROM quiz_attempts a WHERE a.quiz_id=$1 ORDER BY a.started_at DESC", quizID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	attempts := make([]domain.QuizAttempt, 0)
-	for rows.Next() {
-		var a domain.QuizAttempt
-		if err := rows.Scan(&a.ID, &a.QuizID, &a.UserID, &a.UserName, &a.AttemptNumber, &a.StartedAt, &a.SubmittedAt, &a.Score, &a.MaxScore); err != nil {
-			return nil, err
-		}
-		attempts = append(attempts, a)
-	}
-	return attempts, rows.Err()
+	return scanAttempts(rows)
 }
 
 func (r *repository) ListMine(ctx context.Context, quizID, userID string) ([]domain.QuizAttempt, error) {

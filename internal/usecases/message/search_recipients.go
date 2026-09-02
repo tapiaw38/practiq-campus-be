@@ -8,11 +8,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
 	SearchRecipientsUsecase interface {
-		Execute(context.Context, string, bool, string, string) (*SearchRecipientsOutput, apperrors.ApplicationError)
+		Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, query, bearerToken string) (*SearchRecipientsOutput, apperrors.ApplicationError)
 	}
 
 	searchRecipientsUsecase struct {
@@ -39,7 +40,7 @@ func NewSearchRecipientsUsecase(contextFactory appcontext.Factory) SearchRecipie
 // in Go rather than SQL: a course roster is small (a class), so there's no
 // real cost, and it avoids a bespoke cross-table search query for what is
 // fundamentally list-then-filter.
-func (u *searchRecipientsUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, query string) (*SearchRecipientsOutput, apperrors.ApplicationError) {
+func (u *searchRecipientsUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, query, bearerToken string) (*SearchRecipientsOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
 	c, err := app.Repositories.Course.Get(ctx, courseID)
@@ -70,22 +71,29 @@ func (u *searchRecipientsUsecase) Execute(ctx context.Context, requesterID strin
 	}
 	delete(candidateIDs, requesterID)
 
+	ids := make([]string, 0, len(candidateIDs))
+	for id := range candidateIDs {
+		ids = append(ids, id)
+	}
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, ids)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+
 	q := strings.ToLower(strings.TrimSpace(query))
 	results := make([]RecipientData, 0, len(candidateIDs))
 	for id := range candidateIDs {
-		p, err := app.Repositories.Profile.Get(ctx, id)
-		if err != nil {
-			return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
-		}
-		if p == nil {
+		info, known := names[id]
+		if !known {
 			continue
 		}
+		fullName := identity.FullName(info, id)
 		if q != "" &&
-			!strings.Contains(strings.ToLower(p.FullName), q) &&
-			!strings.Contains(strings.ToLower(p.Email), q) {
+			!strings.Contains(strings.ToLower(fullName), q) &&
+			!strings.Contains(strings.ToLower(info.Email), q) {
 			continue
 		}
-		results = append(results, RecipientData{ID: p.ID, FullName: p.FullName, Email: p.Email})
+		results = append(results, RecipientData{ID: id, FullName: fullName, Email: info.Email})
 	}
 
 	sort.Slice(results, func(i, j int) bool { return results[i].FullName < results[j].FullName })

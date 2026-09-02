@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -39,6 +40,10 @@ type (
 		// requires superadmin for this lookup) and returns nil, nil when no
 		// account exists for that email — not found is not an error here.
 		GetByEmail(ctx context.Context, bearerToken, email string) (*UserInfo, error)
+		// GetBatch resolves display identity (name/email) for a set of user
+		// ids in one round trip — open to any authenticated caller, unlike
+		// GetByEmail. Unknown ids are silently omitted from the result.
+		GetBatch(ctx context.Context, bearerToken string, ids []string) ([]UserInfo, error)
 	}
 
 	client struct {
@@ -145,4 +150,46 @@ func (c *client) GetByEmail(ctx context.Context, bearerToken, email string) (*Us
 		Email:     parsed.Data.Email,
 		Roles:     roles,
 	}, nil
+}
+
+func (c *client) GetBatch(ctx context.Context, bearerToken string, ids []string) ([]UserInfo, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/user/batch?ids="+url.QueryEscape(strings.Join(ids, ",")), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", bearerToken)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		var errBody map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		return nil, fmt.Errorf("auth-api-be batch lookup failed (status %d): %v", resp.StatusCode, errBody)
+	}
+
+	var parsed struct {
+		Data []struct {
+			ID        string `json:"id"`
+			FirstName string `json:"first_name"`
+			LastName  string `json:"last_name"`
+			Email     string `json:"email"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+
+	out := make([]UserInfo, 0, len(parsed.Data))
+	for _, d := range parsed.Data {
+		out = append(out, UserInfo{ID: d.ID, FirstName: d.FirstName, LastName: d.LastName, Email: d.Email})
+	}
+	return out, nil
 }

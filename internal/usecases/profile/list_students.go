@@ -7,6 +7,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
@@ -23,9 +24,10 @@ type (
 		Meta ListMeta      `json:"meta"`
 	}
 	ListStudentsInput struct {
-		Search  string
-		Page    int
-		PerPage int
+		Search      string
+		Page        int
+		PerPage     int
+		BearerToken string
 	}
 	ListMeta struct {
 		Page       int `json:"page"`
@@ -41,7 +43,11 @@ func NewListStudentsUsecase(contextFactory appcontext.Factory) ListStudentsUseca
 
 // Execute lists every locally known Campus profile — both students and
 // teachers — since the admin "Usuarios" screen manages accounts in general,
-// not just students.
+// not just students. Name/email no longer live locally, so search and
+// pagination both happen in memory after a single batch identity lookup.
+// ponytail: fine at classroom-app scale (dozens/hundreds of accounts); if
+// the user base grows large, move search to an auth-api-be endpoint that
+// filters server-side instead of fetching every local profile per request.
 func (u *listStudentsUsecase) Execute(ctx context.Context, input ListStudentsInput) (*ListStudentsOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 	if input.Page < 1 {
@@ -50,13 +56,44 @@ func (u *listStudentsUsecase) Execute(ctx context.Context, input ListStudentsInp
 	if input.PerPage < 1 || input.PerPage > 20 {
 		input.PerPage = 20
 	}
-	input.Search = strings.TrimSpace(input.Search)
+	search := strings.ToLower(strings.TrimSpace(input.Search))
 
-	profiles, total, err := app.Repositories.Profile.ListAll(ctx, input.Search, input.PerPage, (input.Page-1)*input.PerPage)
+	profiles, _, err := app.Repositories.Profile.ListAll(ctx, 1_000_000, 0)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
 	}
 
+	ids := make([]string, 0, len(profiles))
+	for _, p := range profiles {
+		ids = append(ids, p.ID)
+	}
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, input.BearerToken, ids)
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+
+	matches := make([]ProfileData, 0, len(profiles))
+	for _, p := range profiles {
+		info := names[p.ID]
+		fullName := identity.FullName(info, p.ID)
+		if search != "" &&
+			!strings.Contains(strings.ToLower(fullName), search) &&
+			!strings.Contains(strings.ToLower(info.Email), search) {
+			continue
+		}
+		matches = append(matches, toProfileData(p, fullName, info.Email))
+	}
+
+	total := len(matches)
 	totalPages := (total + input.PerPage - 1) / input.PerPage
-	return &ListStudentsOutput{Data: toProfileDataList(profiles), Meta: ListMeta{Page: input.Page, PerPage: input.PerPage, Total: total, TotalPages: totalPages}}, nil
+	start := (input.Page - 1) * input.PerPage
+	if start > total {
+		start = total
+	}
+	end := start + input.PerPage
+	if end > total {
+		end = total
+	}
+
+	return &ListStudentsOutput{Data: matches[start:end], Meta: ListMeta{Page: input.Page, PerPage: input.PerPage, Total: total, TotalPages: totalPages}}, nil
 }

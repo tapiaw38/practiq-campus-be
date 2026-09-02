@@ -28,9 +28,10 @@ func NewSendHandler(uc ucMessage.SendUsecase) gin.HandlerFunc {
 
 		userID := middlewares.GetUserID(c)
 		output, appErr := uc.Execute(c, userID, ucMessage.SendInput{
-			ToUserID: input.ToUserID,
-			ToEmail:  input.ToEmail,
-			Body:     input.Body,
+			ToUserID:    input.ToUserID,
+			ToEmail:     input.ToEmail,
+			Body:        input.Body,
+			BearerToken: c.GetHeader("Authorization"),
 		})
 		if appErr != nil {
 			appErr.Log(c)

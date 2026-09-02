@@ -14,7 +14,7 @@ func NewListByCourseHandler(uc ucEnrollment.ListByCourseUsecase) gin.HandlerFunc
 		userID := middlewares.GetUserID(c)
 		isSuperAdmin := middlewares.IsSuperAdmin(c)
 
-		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID)
+		output, appErr := uc.Execute(c, userID, isSuperAdmin, courseID, c.GetHeader("Authorization"))
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

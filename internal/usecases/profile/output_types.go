@@ -13,23 +13,18 @@ type ProfileData struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-func toProfileData(p domain.Profile) ProfileData {
+// toProfileData takes name/email pre-resolved by the caller (from
+// auth-api-be, see internal/platform/identity) since domain.Profile no
+// longer carries identity fields.
+func toProfileData(p domain.Profile, fullName, email string) ProfileData {
 	return ProfileData{
 		ID:          p.ID,
 		ProfileType: p.ProfileType,
-		FullName:    p.FullName,
-		Email:       p.Email,
+		FullName:    fullName,
+		Email:       email,
 		AvatarURL:   p.AvatarURL,
 		Bio:         p.Bio,
 		IsBlocked:   p.IsBlocked,
 		CreatedAt:   p.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
-}
-
-func toProfileDataList(profiles []domain.Profile) []ProfileData {
-	out := make([]ProfileData, 0, len(profiles))
-	for _, p := range profiles {
-		out = append(out, toProfileData(p))
-	}
-	return out
 }

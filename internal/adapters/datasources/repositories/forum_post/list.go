@@ -32,10 +32,9 @@ func (r *repository) ListByThread(ctx context.Context, threadID string, options 
 		FROM forum_posts child
 		JOIN post_tree tree ON child.parent_post_id = tree.id
 	)
-	SELECT p.id, p.thread_id, p.parent_post_id, p.author_id, COALESCE(cp.full_name, p.author_id), p.body, p.created_at
-	FROM post_tree p
-	LEFT JOIN campus_profiles cp ON cp.id = p.author_id
-	ORDER BY p.root_created_at ASC, p.created_at ASC`
+	SELECT id, thread_id, parent_post_id, author_id, body, created_at
+	FROM post_tree
+	ORDER BY root_created_at ASC, created_at ASC`
 	rows, err := r.db.QueryContext(ctx, query, threadID, limit, options.Offset)
 	if err != nil {
 		return nil, err
@@ -45,7 +44,7 @@ func (r *repository) ListByThread(ctx context.Context, threadID string, options 
 	var posts []domain.ForumPost
 	for rows.Next() {
 		var p domain.ForumPost
-		if err := rows.Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.AuthorName, &p.Body, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.Body, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		posts = append(posts, p)
