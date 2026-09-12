@@ -179,3 +179,44 @@ func SetStatus(repo tenantRepo.Repository, practiq practiqapi.Client) gin.Handle
 		}})
 	}
 }
+
+// EligibleSchools lists the institutions Campus could be enabled for and has
+// not been yet.
+//
+// Enabling one used to mean pasting a uuid copied from another product: the
+// operator had to know the id, and a typo came back as "no such school"
+// without saying which part was wrong. The server already knows which schools
+// qualify, so it offers them instead of asking.
+func EligibleSchools(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		schools, err := practiq.ListAllSchools(c, c.GetHeader("Authorization"))
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "tenant:scope-unavailable", "message": "could not reach Practiq"})
+			return
+		}
+		tenants, err := repo.List(c)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:list-error", "message": "could not list Campus institutions"})
+			return
+		}
+
+		// Already enabled ones are left out rather than shown and refused: the
+		// list is meant to be a set of choices that work.
+		enabled := make(map[string]bool, len(tenants))
+		for _, value := range tenants {
+			enabled[value.SchoolID] = true
+		}
+
+		type schoolOption struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		result := make([]schoolOption, 0)
+		for _, school := range schools {
+			if eligible(school) && !enabled[school.ID] {
+				result = append(result, schoolOption{ID: school.ID, Name: school.Name})
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"data": result})
+	}
+}

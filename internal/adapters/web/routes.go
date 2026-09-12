@@ -48,6 +48,7 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	// RequireTenant, so they stay reachable without one: they are how a tenant
 	// comes to exist, and an operator has none selected while doing it.
 	superAdminOnly.GET("/tenants", handlerTenant.List(tenants, practiq))
+	superAdminOnly.GET("/tenants/eligible-schools", handlerTenant.EligibleSchools(tenants, practiq))
 	superAdminOnly.POST("/tenants", handlerTenant.Activate(tenants, practiq))
 	superAdminOnly.PATCH("/tenants/:id/status", handlerTenant.SetStatus(tenants, practiq))
 
