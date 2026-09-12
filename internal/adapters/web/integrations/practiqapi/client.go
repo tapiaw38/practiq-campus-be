@@ -11,25 +11,29 @@ import (
 )
 
 type (
+	// These carry the wire names practiq-be uses, so handing one straight to
+	// c.JSON keeps the shape Campus's frontend reads. Without them Go emits
+	// the Go field names instead, which is how member cards once rendered
+	// blank: every value arrived, under a key nobody was looking at.
 	ProfileInfo struct {
-		ID          string
-		Name        string
-		ProfileType string
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		ProfileType string `json:"profile_type"`
 	}
 
 	StudentInfo struct {
-		ID    string
-		Name  string
-		Email string
+		ID    string `json:"id"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
 	}
 
 	SchoolInfo struct {
-		ID      string
-		Name    string
-		Kind    string
-		Billing string
-		Status  string
-		Role    string
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Kind    string `json:"kind"`
+		Billing string `json:"billing"`
+		Status  string `json:"status"`
+		Role    string `json:"role"`
 	}
 
 	SchoolMemberInfo struct {
@@ -41,10 +45,10 @@ type (
 	}
 
 	SubjectInfo struct {
-		ID          string
-		Name        string
-		Description string
-		CreatedBy   string
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CreatedBy   string `json:"created_by"`
 	}
 
 	// Client talks to practiq-be's own profile endpoint, so Campus can tell
