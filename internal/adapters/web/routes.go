@@ -32,9 +32,8 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api := app.Group("/api")
 	api.Use(middlewares.AuthMiddleware(profiles))
 
-	teacherOnly := api.Group("/")
-	teacherOnly.Use(middlewares.RequireRoles(middlewares.RoleTeacher, middlewares.RoleSuperAdmin))
-
+	// These platform administration routes intentionally exist outside a
+	// tenant: they are how a superadmin creates and selects tenants.
 	superAdminOnly := api.Group("/")
 	superAdminOnly.Use(middlewares.RequireRoles(middlewares.RoleSuperAdmin))
 
@@ -56,6 +55,17 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	// The three bootstrap routes above deliberately do not: they establish the
 	// local profile and let a user discover which tenant to select.
 	api.Use(middlewares.RequireTenant(tenants, practiq))
+	// This group must be created after RequireTenant. Gin copies parent
+	// handlers at Group creation; creating it above would let a global auth
+	// role decide access before Campus knew which institution was selected.
+	teacherOnly := api.Group("/")
+	teacherOnly.Use(middlewares.RequireTenantStaff())
+	// Institution administration is tenant-scoped. A school admin can only see
+	// their selected school's members; platform superadmin can operate any
+	// selected Campus institution.
+	api.GET("/school/members", handlerTenant.SchoolMembers(tenants, practiq))
+	api.POST("/school/members", handlerTenant.AddSchoolMember(tenants, practiq))
+	api.DELETE("/school/members/:userID", handlerTenant.RemoveSchoolMember(tenants, practiq))
 	api.GET("/me/preferences/:scope", handlerPreference.NewGetHandler(uc.Preference.Get))
 	api.PUT("/me/preferences/:scope", handlerPreference.NewUpdateHandler(uc.Preference.Update))
 	api.GET("/notifications", handlerNotification.List(uc.Notification.Manage))

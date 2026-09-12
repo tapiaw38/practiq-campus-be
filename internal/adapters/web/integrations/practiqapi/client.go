@@ -1,10 +1,12 @@
 package practiqapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -28,6 +30,14 @@ type (
 		Billing string
 		Status  string
 		Role    string
+	}
+
+	SchoolMemberInfo struct {
+		UserID string
+		Name   string
+		Email  string
+		Role   string
+		Active bool
 	}
 
 	SubjectInfo struct {
@@ -58,13 +68,38 @@ type (
 		// and qualifies before enabling it, rather than trusting the id it was
 		// handed. Read-only: practiq-be stays the owner of school records.
 		ListAllSchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error)
+		ListSchoolMembers(ctx context.Context, bearerToken, schoolID string) ([]SchoolMemberInfo, error)
+		AddSchoolMember(ctx context.Context, bearerToken, schoolID, userID, role string) error
+		RemoveSchoolMember(ctx context.Context, bearerToken, schoolID, userID string) error
 	}
 
 	client struct {
 		baseURL string
 		http    *http.Client
 	}
+
+	UpstreamError struct {
+		Status  int
+		Code    string
+		Message string
+	}
 )
+
+func (e *UpstreamError) Error() string {
+	return fmt.Sprintf("practiq-be refused (status %d): %s", e.Status, e.Message)
+}
+
+func upstreamError(resp *http.Response, fallback string) error {
+	var parsed struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&parsed)
+	if parsed.Message == "" {
+		parsed.Message = fallback
+	}
+	return &UpstreamError{Status: resp.StatusCode, Code: parsed.Code, Message: parsed.Message}
+}
 
 func NewClient(baseURL string) Client {
 	return &client{baseURL: baseURL, http: &http.Client{Timeout: 10 * time.Second}}
@@ -254,4 +289,78 @@ func (c *client) ListSubjects(ctx context.Context, bearerToken string) ([]Subjec
 		subjects = append(subjects, SubjectInfo{ID: s.ID, Name: s.Name, Description: s.Description, CreatedBy: s.CreatedBy})
 	}
 	return subjects, nil
+}
+
+// ListSchoolMembers keeps School as source of truth for Campus people. Campus
+// owns course data, not institution memberships or their roles.
+func (c *client) ListSchoolMembers(ctx context.Context, bearerToken, schoolID string) ([]SchoolMemberInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/schools/"+url.PathEscape(schoolID)+"/members", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", bearerToken)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, upstreamError(resp, "could not load institution members")
+	}
+	var parsed struct {
+		Data []struct {
+			UserID string `json:"user_id"`
+			Name   string `json:"name"`
+			Email  string `json:"email"`
+			Role   string `json:"role"`
+			Active bool   `json:"active"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	result := make([]SchoolMemberInfo, 0, len(parsed.Data))
+	for _, m := range parsed.Data {
+		result = append(result, SchoolMemberInfo{UserID: m.UserID, Name: m.Name, Email: m.Email, Role: m.Role, Active: m.Active})
+	}
+	return result, nil
+}
+
+func (c *client) AddSchoolMember(ctx context.Context, bearerToken, schoolID, userID, role string) error {
+	body, err := json.Marshal(map[string]string{"user_id": userID, "role": role})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/schools/"+url.PathEscape(schoolID)+"/members", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", bearerToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return upstreamError(resp, "could not add member to institution")
+	}
+	return nil
+}
+
+func (c *client) RemoveSchoolMember(ctx context.Context, bearerToken, schoolID, userID string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/api/schools/"+url.PathEscape(schoolID)+"/members/"+url.PathEscape(userID), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", bearerToken)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return upstreamError(resp, "could not remove member from institution")
+	}
+	return nil
 }

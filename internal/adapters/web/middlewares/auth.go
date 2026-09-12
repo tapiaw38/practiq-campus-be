@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	profileRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/profile"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/auth"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 func AuthMiddleware(profiles profileRepo.Repository) gin.HandlerFunc {
@@ -97,5 +98,20 @@ func RequireRoles(expected ...string) gin.HandlerFunc {
 			return
 		}
 		c.Next()
+	}
+}
+
+// RequireTenantStaff is deliberately separate from RequireRoles. Auth's
+// `admin` role is platform-wide and only says the identity may teach
+// somewhere; whether they may manage this Campus institution is determined by
+// the active school membership attached by RequireTenant.
+func RequireTenantStaff() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if IsSuperAdmin(c) || tenantcontext.IsAdmin(c) || tenantcontext.Role(c) == tenantcontext.RoleTeacher {
+			c.Next()
+			return
+		}
+		c.JSON(http.StatusForbidden, gin.H{"code": "tenant:staff-required", "message": "teacher or institution administrator access required"})
+		c.Abort()
 	}
 }
