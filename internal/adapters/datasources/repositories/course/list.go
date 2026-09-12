@@ -2,48 +2,44 @@ package course
 
 import (
 	"context"
+
 	"github.com/lib/pq"
-	"strconv"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 // Qualified with c.: the JOIN below brings in enrollments, which also has
 // id/status columns, so the bare names in selectCourseColumns (fine for the
 // single-table Get/GetBySlug queries) are ambiguous here.
 const selectQualifiedCourseColumns = `
-	c.id, c.owner_id, c.title, c.slug, c.description, c.status, c.start_date, c.end_date, c.created_at, c.updated_at, c.practiq_subject_id, c.labels
+	c.id, c.tenant_id, c.owner_id, c.title, c.slug, c.description, c.status, c.start_date, c.end_date, c.created_at, c.updated_at, c.practiq_subject_id, c.labels
 `
 
 func (r *repository) List(ctx context.Context, filter ListFilter) ([]domain.Course, error) {
-	query := "SELECT " + selectQualifiedCourseColumns + " FROM courses c"
-	args := []any{}
-	where := []string{}
+	// No tenant is refused rather than left unfiltered. This listing used to
+	// skip the condition when none was set, which answered a request that
+	// never passed RequireTenant with every institution's courses.
+	q := tenantcontext.NewQuery(ctx).Own("c.tenant_id")
 
+	from := "courses c"
 	if filter.EnrolledUserID != "" {
-		query += " JOIN enrollments e ON e.course_id = c.id"
-		args = append(args, filter.EnrolledUserID)
-		where = append(where, "e.user_id = $"+strconv.Itoa(len(args))+" AND e.status = 'active'")
+		from += " JOIN enrollments e ON e.course_id = c.id"
+		q.Where("e.user_id = ? AND e.status = 'active'", filter.EnrolledUserID)
 	}
 	if filter.OwnerID != "" {
-		args = append(args, filter.OwnerID)
-		where = append(where, "c.owner_id = $"+strconv.Itoa(len(args)))
+		q.Where("c.owner_id = ?", filter.OwnerID)
 	}
 	if filter.PublishedOnly {
-		where = append(where, "c.status = 'published'")
+		q.Where("c.status = 'published'")
 	}
 
-	for i, cond := range where {
-		if i == 0 {
-			query += " WHERE "
-		} else {
-			query += " AND "
-		}
-		query += cond
+	query, args, err := q.SQL(selectQualifiedCourseColumns, from)
+	if err != nil {
+		return nil, err
 	}
-	query += " ORDER BY c.created_at DESC"
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY c.created_at DESC", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +49,7 @@ func (r *repository) List(ctx context.Context, filter ListFilter) ([]domain.Cour
 	for rows.Next() {
 		var c domain.Course
 		if err := rows.Scan(
-			&c.ID, &c.OwnerID, &c.Title, &c.Slug, &c.Description, &c.Status,
+			&c.ID, &c.TenantID, &c.OwnerID, &c.Title, &c.Slug, &c.Description, &c.Status,
 			&c.StartDate, &c.EndDate, &c.CreatedAt, &c.UpdatedAt, &c.PractiqSubjectID, pq.Array(&c.Labels),
 		); err != nil {
 			return nil, err

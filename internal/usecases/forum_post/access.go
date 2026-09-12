@@ -2,6 +2,7 @@ package forum_post
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
@@ -32,7 +33,7 @@ func requesterCanAccessThread(ctx context.Context, app *appcontext.Context, requ
 	if c == nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
-	if c.OwnerID == requesterID {
+	if campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, false) {
 		return thread, nil
 	}
 

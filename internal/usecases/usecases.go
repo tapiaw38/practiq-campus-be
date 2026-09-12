@@ -51,7 +51,6 @@ type EnrollmentUsecases struct {
 	ListByCourse ucEnrollment.ListByCourseUsecase
 	ListMine     ucEnrollment.ListMineUsecase
 	Delete       ucEnrollment.DeleteUsecase
-	Self         ucEnrollment.SelfUsecase
 }
 
 type CourseMaterialUsecases struct {
@@ -182,7 +181,6 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			ListByCourse: ucEnrollment.NewListByCourseUsecase(contextFactory),
 			ListMine:     ucEnrollment.NewListMineUsecase(contextFactory),
 			Delete:       ucEnrollment.NewDeleteUsecase(contextFactory),
-			Self:         ucEnrollment.NewSelfUsecase(contextFactory),
 		},
 		CourseSection: CourseSectionUsecases{
 			Create: ucSection.NewCreateUsecase(contextFactory),

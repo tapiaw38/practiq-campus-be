@@ -2,6 +2,7 @@ package submission
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 	"strings"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
@@ -64,7 +65,7 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 		if err != nil {
 			return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
 		}
-		if c == nil || c.OwnerID != requesterID {
+		if c == nil || !campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, false) {
 			return nil, apperrors.NewForbiddenError()
 		}
 	}

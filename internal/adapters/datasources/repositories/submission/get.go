@@ -5,15 +5,27 @@ import (
 	"database/sql"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-const selectSubmissionColumns = `
-	id, assignment_id, user_id, content, status, score, feedback, submitted_at, graded_at
+// Qualified for the tenant chain: submissions reach an institution through
+// their assignment's course, two hops away.
+const selectQualifiedSubmissionColumns = `
+	s.id, s.assignment_id, s.user_id, s.content, s.status, s.score, s.feedback, s.submitted_at, s.graded_at
 `
 
-func scanSubmission(row *sql.Row) (*domain.Submission, error) {
+// tenantChain is the path every submission query walks: submission → assignment
+// → course, where the tenant lives.
+func tenantChain(ctx context.Context) *tenantcontext.Query {
+	return tenantcontext.NewQuery(ctx).
+		Join("assignments", "a", "s.assignment_id").
+		Through("courses", "c", "a.course_id")
+}
+
+func scanSubmission(row interface{ Scan(...any) error }) (*domain.Submission, error) {
 	var s domain.Submission
-	err := row.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.Content, &s.Status, &s.Score, &s.Feedback, &s.SubmittedAt, &s.GradedAt)
+	err := row.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.Content, &s.Status, &s.Score,
+		&s.Feedback, &s.SubmittedAt, &s.GradedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -23,12 +35,24 @@ func scanSubmission(row *sql.Row) (*domain.Submission, error) {
 	return &s, nil
 }
 
+// Get holds a student's work and their grade, so an id from another
+// institution must not resolve here.
 func (r *repository) Get(ctx context.Context, id string) (*domain.Submission, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT "+selectSubmissionColumns+" FROM submissions WHERE id = $1", id)
-	return scanSubmission(row)
+	query, args, err := tenantChain(ctx).Where("s.id = ?", id).
+		SQL(selectQualifiedSubmissionColumns, "submissions s")
+	if err != nil {
+		return nil, err
+	}
+	return scanSubmission(r.db.QueryRowContext(ctx, query, args...))
 }
 
 func (r *repository) GetByAssignmentAndUser(ctx context.Context, assignmentID, userID string) (*domain.Submission, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT "+selectSubmissionColumns+" FROM submissions WHERE assignment_id = $1 AND user_id = $2", assignmentID, userID)
-	return scanSubmission(row)
+	query, args, err := tenantChain(ctx).
+		Where("s.assignment_id = ?", assignmentID).
+		Where("s.user_id = ?", userID).
+		SQL(selectQualifiedSubmissionColumns, "submissions s")
+	if err != nil {
+		return nil, err
+	}
+	return scanSubmission(r.db.QueryRowContext(ctx, query, args...))
 }

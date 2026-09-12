@@ -2,6 +2,7 @@ package submission
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -43,7 +44,7 @@ func (u *listByAssignmentUsecase) Execute(ctx context.Context, requesterID strin
 		if err != nil {
 			return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
 		}
-		if c == nil || c.OwnerID != requesterID {
+		if c == nil || !campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, false) {
 			return nil, apperrors.NewForbiddenError()
 		}
 	}

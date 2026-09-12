@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/storage"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 const previewLinkTTL = time.Hour
@@ -78,6 +79,15 @@ func (u *usecase) Execute(ctx context.Context, input Input) (*Output, apperrors.
 	if folder == "" {
 		folder = "materials"
 	}
+	// Files are stored under the institution that owns them:
+	// campus/{tenant}/{folder}/... Keeping the prefix in the key is what makes
+	// the separation visible in the bucket itself, so it can be reasoned about
+	// — and restricted — outside this process too.
+	tenantID := tenantcontext.ID(ctx)
+	if tenantID == "" {
+		return nil, apperrors.NewApplicationError(mappings.UploadError, tenantcontext.ErrNoTenant)
+	}
+	folder = "campus/" + tenantID + "/" + folder
 
 	contentType, kind, _, err := storage.ResolveContentType(input.ContentType, body)
 	if err != nil {

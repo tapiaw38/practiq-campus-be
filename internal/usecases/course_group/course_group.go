@@ -2,6 +2,7 @@ package course_group
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
@@ -57,7 +58,7 @@ func (u *usecase) requesterOwnsGroupsCourse(ctx context.Context, requesterID str
 	if c == nil {
 		return apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
-	if c.OwnerID != requesterID {
+	if !campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, false) {
 		return apperrors.NewForbiddenError()
 	}
 	return nil

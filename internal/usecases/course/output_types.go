@@ -8,6 +8,7 @@ import (
 
 type CourseData struct {
 	ID               string   `json:"id"`
+	TenantID         string   `json:"tenant_id"`
 	OwnerID          string   `json:"owner_id"`
 	Title            string   `json:"title"`
 	Slug             string   `json:"slug"`
@@ -32,6 +33,7 @@ func formatDate(t *time.Time) *string {
 func toCourseData(c domain.Course) CourseData {
 	return CourseData{
 		ID:               c.ID,
+		TenantID:         c.TenantID,
 		OwnerID:          c.OwnerID,
 		Title:            c.Title,
 		Slug:             c.Slug,

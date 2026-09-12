@@ -2,6 +2,7 @@ package quiz_attempt
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -52,7 +53,7 @@ func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdm
 		if err != nil {
 			return nil, apperrors.NewInternalError(err)
 		}
-		if course == nil || course.OwnerID != requesterID {
+		if course == nil || !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false) {
 			return nil, apperrors.NewForbiddenError()
 		}
 	}

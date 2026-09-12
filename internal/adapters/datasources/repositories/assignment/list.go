@@ -4,11 +4,22 @@ import (
 	"context"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
+// ListByCourse is scoped by the course's tenant as well as by the course, so a
+// course id belonging to another institution returns nothing rather than its
+// assignments.
 func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domain.Assignment, error) {
-	query := `SELECT ` + selectAssignmentColumns + ` FROM assignments WHERE course_id = $1 ORDER BY due_at ASC NULLS LAST, created_at ASC`
-	rows, err := r.db.QueryContext(ctx, query, courseID)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "a.course_id").
+		Where("a.course_id = ?", courseID).
+		SQL(selectQualifiedAssignmentColumns, "assignments a")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY a.due_at ASC NULLS LAST, a.created_at ASC", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -16,11 +27,11 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 
 	var assignments []domain.Assignment
 	for rows.Next() {
-		var a domain.Assignment
-		if err := rows.Scan(&a.ID, &a.CourseID, &a.SectionID, &a.Title, &a.Description, &a.DueAt, &a.MaxScore, &a.CreatedAt, &a.UpdatedAt, &a.Weight, &a.VisibleGroupID, &a.UnlockAfterType, &a.UnlockAfterID); err != nil {
+		a, err := scanAssignment(rows)
+		if err != nil {
 			return nil, err
 		}
-		assignments = append(assignments, a)
+		assignments = append(assignments, *a)
 	}
 	return assignments, rows.Err()
 }

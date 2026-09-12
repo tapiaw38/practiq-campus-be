@@ -2,6 +2,7 @@ package rubric
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -21,7 +22,7 @@ func (u *usecase) List(c context.Context, id, uid string, sa bool) ([]domain.Rub
 		if course == nil {
 			return nil, apperrors.NewBadRequestError("course not found")
 		}
-		if course.OwnerID != uid {
+		if !campusaccess.CanManageCourse(c, course.OwnerID, uid, false) {
 			enrollment, e := a.Repositories.Enrollment.GetByCourseAndUser(c, task.CourseID, uid)
 			if e != nil {
 				return nil, apperrors.NewInternalError(e)

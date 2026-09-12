@@ -5,13 +5,15 @@ import (
 	"database/sql"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-const selectEnrollmentColumns = `
-	id, course_id, user_id, enrollment_role, status, enrolled_at
+// Qualified for the tenant join, which brings courses into scope.
+const selectQualifiedEnrollmentColumns = `
+	e.id, e.course_id, e.user_id, e.enrollment_role, e.status, e.enrolled_at
 `
 
-func scanEnrollment(row *sql.Row) (*domain.Enrollment, error) {
+func scanEnrollment(row interface{ Scan(...any) error }) (*domain.Enrollment, error) {
 	var e domain.Enrollment
 	err := row.Scan(&e.ID, &e.CourseID, &e.UserID, &e.EnrollmentRole, &e.Status, &e.EnrolledAt)
 	if err == sql.ErrNoRows {
@@ -24,15 +26,24 @@ func scanEnrollment(row *sql.Row) (*domain.Enrollment, error) {
 }
 
 func (r *repository) Get(ctx context.Context, id string) (*domain.Enrollment, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT "+selectEnrollmentColumns+" FROM enrollments WHERE id = $1", id)
-	return scanEnrollment(row)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "e.course_id").
+		Where("e.id = ?", id).
+		SQL(selectQualifiedEnrollmentColumns, "enrollments e")
+	if err != nil {
+		return nil, err
+	}
+	return scanEnrollment(r.db.QueryRowContext(ctx, query, args...))
 }
 
 func (r *repository) GetByCourseAndUser(ctx context.Context, courseID, userID string) (*domain.Enrollment, error) {
-	row := r.db.QueryRowContext(
-		ctx,
-		"SELECT "+selectEnrollmentColumns+" FROM enrollments WHERE course_id = $1 AND user_id = $2",
-		courseID, userID,
-	)
-	return scanEnrollment(row)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "e.course_id").
+		Where("e.course_id = ?", courseID).
+		Where("e.user_id = ?", userID).
+		SQL(selectQualifiedEnrollmentColumns, "enrollments e")
+	if err != nil {
+		return nil, err
+	}
+	return scanEnrollment(r.db.QueryRowContext(ctx, query, args...))
 }

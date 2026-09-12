@@ -6,6 +6,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 // requesterOwnsCourse mirrors the assignment package's check of the same
@@ -21,7 +22,7 @@ func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requester
 	if c == nil {
 		return apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
-	if c.OwnerID != requesterID {
+	if !campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, false) {
 		return apperrors.NewForbiddenError()
 	}
 	return nil

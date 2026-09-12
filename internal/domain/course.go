@@ -14,6 +14,7 @@ const (
 // decided by Enrollment.Role, not by this struct.
 type Course struct {
 	ID          string
+	TenantID    string
 	OwnerID     string
 	Title       string
 	Slug        string

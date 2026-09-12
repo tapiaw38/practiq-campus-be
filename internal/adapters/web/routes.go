@@ -3,6 +3,7 @@ package web
 import (
 	"github.com/gin-gonic/gin"
 	profileRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/profile"
+	tenantRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/tenant"
 	handlerAssignment "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/assignment"
 	handlerCalendar "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/calendar_event"
 	handlerCourse "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/course"
@@ -20,12 +21,14 @@ import (
 	handlerQuizAttempt "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/quiz_attempt"
 	handlerRubric "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/rubric"
 	handlerSubmission "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/submission"
+	handlerTenant "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/tenant"
 	handlerUpload "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/upload"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/practiqapi"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/middlewares"
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases"
 )
 
-func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo.Repository) {
+func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo.Repository, tenants tenantRepo.Repository, practiq practiqapi.Client) {
 	api := app.Group("/api")
 	api.Use(middlewares.AuthMiddleware(profiles))
 
@@ -38,6 +41,20 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	// Profile — any authenticated user.
 	api.POST("/profile", handlerProfile.NewSyncHandler(uc.Profile.Sync))
 	api.GET("/profile/me", handlerProfile.NewGetMeHandler(uc.Profile.Get))
+	api.GET("/tenants/mine", handlerTenant.Mine(tenants, practiq))
+
+	// Campus institutions are enabled by the platform superadmin, never by an
+	// institution itself. These are registered on a group created before
+	// RequireTenant, so they stay reachable without one: they are how a tenant
+	// comes to exist, and an operator has none selected while doing it.
+	superAdminOnly.GET("/tenants", handlerTenant.List(tenants, practiq))
+	superAdminOnly.POST("/tenants", handlerTenant.Activate(tenants, practiq))
+	superAdminOnly.PATCH("/tenants/:id/status", handlerTenant.SetStatus(tenants, practiq))
+
+	// Every product route below runs inside a validated Campus institution.
+	// The three bootstrap routes above deliberately do not: they establish the
+	// local profile and let a user discover which tenant to select.
+	api.Use(middlewares.RequireTenant(tenants, practiq))
 	api.GET("/me/preferences/:scope", handlerPreference.NewGetHandler(uc.Preference.Get))
 	api.PUT("/me/preferences/:scope", handlerPreference.NewUpdateHandler(uc.Preference.Update))
 	api.GET("/notifications", handlerNotification.List(uc.Notification.Manage))
@@ -63,7 +80,10 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	teacherOnly.POST("/courses/:id/enrollments", handlerEnrollment.NewCreateHandler(uc.Enrollment.Create))
 	teacherOnly.GET("/courses/:id/enrollments", handlerEnrollment.NewListByCourseHandler(uc.Enrollment.ListByCourse))
 	api.GET("/me/enrollments", handlerEnrollment.NewListMineHandler(uc.Enrollment.ListMine))
-	api.POST("/courses/:id/enrollments/self", handlerEnrollment.NewSelfHandler(uc.Enrollment.Self))
+	// Self-enrolment is deliberately absent. Campus serves institutions that
+	// decide who attends what: a published course is not an open one, and a
+	// student adding themselves would enrol past whatever the institution
+	// arranged. Enrolment comes from the course's teacher or its admin.
 	teacherOnly.GET("/me/practiq-students", handlerProfile.NewListMyPractiqStudentsHandler(uc.Profile.ListMyPractiqStudents))
 	teacherOnly.DELETE("/enrollments/:id", handlerEnrollment.NewDeleteHandler(uc.Enrollment.Delete))
 

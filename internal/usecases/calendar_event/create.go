@@ -9,6 +9,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 type (
@@ -69,7 +70,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	if course == nil {
 		return nil, apperrors.NewNotFoundError("course not found")
 	}
-	if course.OwnerID != requesterID {
+	if !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false) {
 		return nil, apperrors.NewForbiddenError()
 	}
 	enrollments, err := app.Repositories.Enrollment.ListByCourse(ctx, *input.CourseID)

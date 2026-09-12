@@ -1,8 +1,17 @@
 package course_material
 
-import "context"
+import (
+	"context"
+
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
+)
 
 func (r *repository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM course_materials WHERE id = $1", id)
+	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
+		"courses c", "c.id = course_materials.course_id", "c.tenant_id", 2)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, "DELETE FROM course_materials WHERE id = $1 AND "+guard, id, tenantID)
 	return err
 }

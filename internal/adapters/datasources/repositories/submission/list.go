@@ -7,8 +7,12 @@ import (
 )
 
 func (r *repository) ListByAssignment(ctx context.Context, assignmentID string) ([]domain.Submission, error) {
-	query := `SELECT ` + selectSubmissionColumns + ` FROM submissions WHERE assignment_id = $1 ORDER BY submitted_at ASC`
-	rows, err := r.db.QueryContext(ctx, query, assignmentID)
+	query, args, err := tenantChain(ctx).Where("s.assignment_id = ?", assignmentID).
+		SQL(selectQualifiedSubmissionColumns, "submissions s")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY s.submitted_at ASC", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -16,11 +20,11 @@ func (r *repository) ListByAssignment(ctx context.Context, assignmentID string) 
 
 	var submissions []domain.Submission
 	for rows.Next() {
-		var s domain.Submission
-		if err := rows.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.Content, &s.Status, &s.Score, &s.Feedback, &s.SubmittedAt, &s.GradedAt); err != nil {
+		s, err := scanSubmission(rows)
+		if err != nil {
 			return nil, err
 		}
-		submissions = append(submissions, s)
+		submissions = append(submissions, *s)
 	}
 	return submissions, rows.Err()
 }

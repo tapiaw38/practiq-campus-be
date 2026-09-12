@@ -19,6 +19,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/quiz_attempt"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/rubric"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/submission"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/tenant"
 )
 
 type Repositories struct {
@@ -39,6 +40,7 @@ type Repositories struct {
 	CalendarEvent  calendar_event.Repository
 	Conversation   conversation.Repository
 	Notification   notification.Repository
+	Tenant         tenant.Repository
 }
 
 type Factory func() *Repositories
@@ -63,6 +65,7 @@ func NewFactory(ds *datasources.Datasources) func() *Repositories {
 			CalendarEvent:  calendar_event.NewRepository(ds.DB),
 			Conversation:   conversation.NewRepository(ds.DB),
 			Notification:   notification.NewRepository(ds.DB),
+			Tenant:         tenant.NewRepository(ds.DB),
 		}
 	}
 }

@@ -2,6 +2,7 @@ package assignment
 
 import (
 	"context"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -45,7 +46,7 @@ func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAd
 		if err != nil {
 			return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
 		}
-		isManager = course != nil && course.OwnerID == requesterID
+		isManager = course != nil && campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false)
 	}
 
 	out := make([]AssignmentData, 0, len(assignments))

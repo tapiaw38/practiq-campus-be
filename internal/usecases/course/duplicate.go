@@ -7,6 +7,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 type (
@@ -49,12 +50,13 @@ func (u *duplicateUsecase) Execute(ctx context.Context, requesterID string, isSu
 	if original == nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
-	if !isSuperAdmin && original.OwnerID != requesterID {
+	if !campusaccess.CanManageCourse(ctx, original.OwnerID, requesterID, isSuperAdmin) {
 		return nil, apperrors.NewForbiddenError()
 	}
 
 	slug := slugify(original.Title+"-copia") + "-" + randomSuffix()
 	newCourseID, err := app.Repositories.Course.Create(ctx, domain.Course{
+		TenantID:    original.TenantID,
 		OwnerID:     original.OwnerID,
 		Title:       original.Title + " (copia)",
 		Slug:        slug,

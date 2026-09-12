@@ -3,9 +3,17 @@ package conversation
 import (
 	"context"
 	"database/sql"
+
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
+// ListMine returns the conversations of one institution. A user who belongs to
+// two sees each inbox in its own context, never the two merged.
 func (r *repository) ListMine(ctx context.Context, userID string) ([]ConversationSummary, error) {
+	tenantID := tenantcontext.ID(ctx)
+	if tenantID == "" {
+		return nil, tenantcontext.ErrNoTenant
+	}
 	query := `
 		SELECT
 			c.id,
@@ -27,9 +35,10 @@ func (r *repository) ListMine(ctx context.Context, userID string) ([]Conversatio
 		LEFT JOIN LATERAL (
 			SELECT body, sent_at, sender_id FROM messages WHERE conversation_id = c.id ORDER BY sent_at DESC LIMIT 1
 		) m ON true
+		WHERE c.tenant_id = $2
 		ORDER BY m.sent_at DESC NULLS LAST
 	`
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := r.db.QueryContext(ctx, query, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}

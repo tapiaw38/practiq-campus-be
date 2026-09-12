@@ -21,6 +21,15 @@ type (
 		Email string
 	}
 
+	SchoolInfo struct {
+		ID      string
+		Name    string
+		Kind    string
+		Billing string
+		Status  string
+		Role    string
+	}
+
 	SubjectInfo struct {
 		ID          string
 		Name        string
@@ -43,6 +52,12 @@ type (
 		// per-teacher filter of its own) — callers filter by CreatedBy
 		// themselves when they only want "my" subjects.
 		ListSubjects(ctx context.Context, bearerToken string) ([]SubjectInfo, error)
+		ListMySchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error)
+		// ListAllSchools is practiq-be's platform-wide listing, which it only
+		// serves to a superadmin. Campus uses it to confirm a school exists
+		// and qualifies before enabling it, rather than trusting the id it was
+		// handed. Read-only: practiq-be stays the owner of school records.
+		ListAllSchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error)
 	}
 
 	client struct {
@@ -53,6 +68,77 @@ type (
 
 func NewClient(baseURL string) Client {
 	return &client{baseURL: baseURL, http: &http.Client{Timeout: 10 * time.Second}}
+}
+
+func (c *client) ListMySchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/schools/mine", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", bearerToken)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("practiq-be school scope failed (status %d)", resp.StatusCode)
+	}
+	var parsed struct {
+		Data []struct {
+			ID      string `json:"id"`
+			Name    string `json:"name"`
+			Kind    string `json:"kind"`
+			Billing string `json:"billing"`
+			Status  string `json:"status"`
+			Role    string `json:"role"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	result := make([]SchoolInfo, 0, len(parsed.Data))
+	for _, s := range parsed.Data {
+		result = append(result, SchoolInfo{ID: s.ID, Name: s.Name, Kind: s.Kind, Billing: s.Billing, Status: s.Status, Role: s.Role})
+	}
+	return result, nil
+}
+
+// ListAllSchools reads every school practiq-be knows. Authorisation is
+// practiq-be's: it refuses this to anyone who is not a platform superadmin, so
+// Campus does not get a second, weaker copy of that rule.
+func (c *client) ListAllSchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/schools", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", bearerToken)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("practiq-be school listing failed (status %d)", resp.StatusCode)
+	}
+	var parsed struct {
+		Data []struct {
+			ID      string `json:"id"`
+			Name    string `json:"name"`
+			Kind    string `json:"kind"`
+			Billing string `json:"billing"`
+			Status  string `json:"status"`
+			Role    string `json:"role"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	result := make([]SchoolInfo, 0, len(parsed.Data))
+	for _, s := range parsed.Data {
+		result = append(result, SchoolInfo{ID: s.ID, Name: s.Name, Kind: s.Kind, Billing: s.Billing, Status: s.Status, Role: s.Role})
+	}
+	return result, nil
 }
 
 func (c *client) GetProfile(ctx context.Context, bearerToken, id string) (*ProfileInfo, error) {

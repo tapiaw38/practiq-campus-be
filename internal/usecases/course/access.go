@@ -7,6 +7,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 // requesterOwnsCourse loads the course and confirms the requester is its
@@ -20,7 +21,7 @@ func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requester
 	if c == nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
-	if isSuperAdmin || c.OwnerID == requesterID {
+	if campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, isSuperAdmin) {
 		return c, nil
 	}
 	return nil, apperrors.NewForbiddenError()

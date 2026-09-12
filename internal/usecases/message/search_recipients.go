@@ -9,6 +9,7 @@ import (
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 type (
@@ -51,7 +52,7 @@ func (u *searchRecipientsUsecase) Execute(ctx context.Context, requesterID strin
 		return nil, apperrors.NewApplicationError(mappings.CourseNotFoundError, nil)
 	}
 
-	if !isSuperAdmin && c.OwnerID != requesterID {
+	if !campusaccess.CanManageCourse(ctx, c.OwnerID, requesterID, isSuperAdmin) {
 		enrollment, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, courseID, requesterID)
 		if err != nil {
 			return nil, apperrors.NewApplicationError(mappings.EnrollmentGetError, err)

@@ -4,11 +4,18 @@ import (
 	"context"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domain.CourseMaterial, error) {
-	query := `SELECT ` + selectMaterialColumns + ` FROM course_materials WHERE course_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.QueryContext(ctx, query, courseID)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "m.course_id").
+		Where("m.course_id = ?", courseID).
+		SQL(selectQualifiedMaterialColumns, "course_materials m")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY m.created_at DESC", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -16,11 +23,11 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 
 	var materials []domain.CourseMaterial
 	for rows.Next() {
-		var m domain.CourseMaterial
-		if err := rows.Scan(&m.ID, &m.CourseID, &m.AssignmentID, &m.SectionID, &m.UploaderID, &m.Title, &m.Description, &m.Kind, &m.URL, &m.CreatedAt); err != nil {
+		m, err := scanMaterial(rows)
+		if err != nil {
 			return nil, err
 		}
-		materials = append(materials, m)
+		materials = append(materials, *m)
 	}
 	return materials, rows.Err()
 }

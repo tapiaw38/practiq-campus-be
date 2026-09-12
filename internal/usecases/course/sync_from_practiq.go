@@ -59,7 +59,7 @@ func (u *syncFromPractiqUsecase) Execute(ctx context.Context, requesterID, beare
 		}
 
 		slug := slugify(subject.Name)
-		if bySlug, err := app.Repositories.Course.GetBySlug(ctx, slug); err == nil && bySlug != nil {
+		if bySlug, err := app.Repositories.Course.GetBySlug(ctx, "", slug); err == nil && bySlug != nil {
 			slug = slug + "-" + randomSuffix()
 		}
 

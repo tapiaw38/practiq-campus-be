@@ -10,7 +10,7 @@ import (
 type Repository interface {
 	Create(context.Context, domain.Course) (string, error)
 	Get(context.Context, string) (*domain.Course, error)
-	GetBySlug(context.Context, string) (*domain.Course, error)
+	GetBySlug(context.Context, string, string) (*domain.Course, error)
 	List(context.Context, ListFilter) ([]domain.Course, error)
 	Update(context.Context, string, domain.Course) error
 	Delete(context.Context, string) error
@@ -20,6 +20,7 @@ type Repository interface {
 // courses; EnrolledUserID lists courses a given user is enrolled in
 // (joins enrollments); neither set lists every published course.
 type ListFilter struct {
+	TenantID       string
 	OwnerID        string
 	EnrolledUserID string
 	PublishedOnly  bool

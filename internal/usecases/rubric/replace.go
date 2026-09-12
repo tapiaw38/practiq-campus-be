@@ -6,6 +6,7 @@ import (
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Criterion) apperrors.ApplicationError {
@@ -15,7 +16,7 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 		return apperrors.NewBadRequestError("assignment not found")
 	}
 	course, e := a.Repositories.Course.Get(c, task.CourseID)
-	if e != nil || (!sa && course.OwnerID != uid) {
+	if e != nil || !campusaccess.CanManageCourse(c, course.OwnerID, uid, sa) {
 		return apperrors.NewForbiddenError()
 	}
 	sum := 0

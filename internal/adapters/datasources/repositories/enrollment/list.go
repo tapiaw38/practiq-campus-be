@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 func scanEnrollmentRows(rows interface {
@@ -23,11 +24,14 @@ func scanEnrollmentRows(rows interface {
 }
 
 func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domain.Enrollment, error) {
-	rows, err := r.db.QueryContext(
-		ctx,
-		"SELECT "+selectEnrollmentColumns+" FROM enrollments WHERE course_id = $1 ORDER BY enrolled_at DESC",
-		courseID,
-	)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "e.course_id").
+		Where("e.course_id = ?", courseID).
+		SQL(selectQualifiedEnrollmentColumns, "enrollments e")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY e.enrolled_at DESC", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,12 +39,17 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 	return scanEnrollmentRows(rows)
 }
 
+// ListByUser answers for one institution. A student enrolled in two sees the
+// courses of the one they are looking at, not both lists merged.
 func (r *repository) ListByUser(ctx context.Context, userID string) ([]domain.Enrollment, error) {
-	rows, err := r.db.QueryContext(
-		ctx,
-		"SELECT "+selectEnrollmentColumns+" FROM enrollments WHERE user_id = $1 ORDER BY enrolled_at DESC",
-		userID,
-	)
+	query, args, err := tenantcontext.NewQuery(ctx).
+		Through("courses", "c", "e.course_id").
+		Where("e.user_id = ?", userID).
+		SQL(selectQualifiedEnrollmentColumns, "enrollments e")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, query+" ORDER BY e.enrolled_at DESC", args...)
 	if err != nil {
 		return nil, err
 	}

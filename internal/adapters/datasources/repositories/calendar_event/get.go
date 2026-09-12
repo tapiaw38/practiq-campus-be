@@ -6,6 +6,7 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 const selectEventColumns = `id, owner_id, course_id, title, description, starts_at, ends_at, all_day, recurrence_rule, reminder_minutes, created_at,
@@ -13,7 +14,11 @@ const selectEventColumns = `id, owner_id, course_id, title, description, starts_
 
 func (r *repository) Get(ctx context.Context, id string) (*domain.CalendarEvent, error) {
 	var event domain.CalendarEvent
-	err := r.db.QueryRowContext(ctx, `SELECT `+selectEventColumns+` FROM calendar_events WHERE id = $1`, id).Scan(
+	tenantID := tenantcontext.ID(ctx)
+	if tenantID == "" {
+		return nil, tenantcontext.ErrNoTenant
+	}
+	err := r.db.QueryRowContext(ctx, `SELECT `+selectEventColumns+` FROM calendar_events WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(
 		&event.ID, &event.OwnerID, &event.CourseID, &event.Title, &event.Description, &event.StartsAt, &event.EndsAt,
 		&event.AllDay, &event.RecurrenceRule, &event.ReminderMinutes, &event.CreatedAt, pq.Array(&event.AttendeeIDs),
 	)

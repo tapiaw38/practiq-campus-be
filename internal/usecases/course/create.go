@@ -55,7 +55,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	app := u.contextFactory()
 
 	slug := slugify(input.Title)
-	if existing, err := app.Repositories.Course.GetBySlug(ctx, slug); err != nil {
+	if existing, err := app.Repositories.Course.GetBySlug(ctx, "", slug); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
 	} else if existing != nil {
 		// Two courses with the same title is common ("Matemática"); the slug
