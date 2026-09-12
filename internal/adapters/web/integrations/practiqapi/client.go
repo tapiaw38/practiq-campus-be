@@ -33,11 +33,11 @@ type (
 	}
 
 	SchoolMemberInfo struct {
-		UserID string
-		Name   string
-		Email  string
-		Role   string
-		Active bool
+		UserID string `json:"user_id"`
+		Name   string `json:"name"`
+		Email  string `json:"email"`
+		Role   string `json:"role"`
+		Active bool   `json:"active"`
 	}
 
 	SubjectInfo struct {
