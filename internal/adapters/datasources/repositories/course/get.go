@@ -46,6 +46,15 @@ func (r *repository) Get(ctx context.Context, id string) (*domain.Course, error)
 // GetBySlug takes the tenant explicitly because slugs are only unique within
 // one: the same slug in two institutions is two different courses.
 func (r *repository) GetBySlug(ctx context.Context, tenantID, slug string) (*domain.Course, error) {
+	// Callers may omit tenantID when operating inside an HTTP request. Resolve
+	// it from validated tenant middleware instead of sending an empty string to
+	// PostgreSQL's UUID parameter.
+	if tenantID == "" {
+		tenantID = tenantcontext.ID(ctx)
+	}
+	if tenantID == "" {
+		return nil, tenantcontext.ErrNoTenant
+	}
 	row := r.db.QueryRowContext(ctx, "SELECT "+selectCourseColumns+" FROM courses WHERE tenant_id = $1 AND slug = $2", tenantID, slug)
 	return scanCourse(row)
 }
