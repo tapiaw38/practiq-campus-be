@@ -7,6 +7,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
 )
 
 type (
@@ -87,6 +88,15 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	if created == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
+
+	// The create response is inserted directly into the teacher's list by the
+	// frontend, so enrich it here as well as in ListByCourse. Otherwise the new
+	// row briefly shows the username fallback until the page is reloaded.
+	names, err := identity.Names(ctx, app.Integrations.AuthAPI, input.BearerToken, []string{created.UserID})
+	if err != nil {
+		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+	}
+	created.UserName = identity.FullName(names[created.UserID], created.UserID)
 
 	return &CreateOutput{Data: toEnrollmentData(*created)}, nil
 }
