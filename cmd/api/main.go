@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/config"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/database"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/revocation"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/storage"
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases"
 )
@@ -53,7 +55,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok", "service": "practiq-campus-be"})
 	})
 
-	web.RegisterRoutes(app, uc, repos.Profile, repos.Tenant, integ.PractiqAPI)
+	revoked := revocation.NewChecker(integ.AuthAPI.GetTokenVersion, 60*time.Second)
+
+	web.RegisterRoutes(app, uc, repos.Profile, repos.Tenant, integ.PractiqAPI, revoked)
 
 	port := cfg.ServerConfig.Port
 	log.Printf("practiq-campus-be running on port %s", port)

@@ -25,12 +25,13 @@ import (
 	handlerUpload "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/upload"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/practiqapi"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/middlewares"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/revocation"
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases"
 )
 
-func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo.Repository, tenants tenantRepo.Repository, practiq practiqapi.Client) {
+func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo.Repository, tenants tenantRepo.Repository, practiq practiqapi.Client, revoked *revocation.Checker) {
 	api := app.Group("/api")
-	api.Use(middlewares.AuthMiddleware(profiles))
+	api.Use(middlewares.AuthMiddleware(profiles, revoked))
 
 	// These platform administration routes intentionally exist outside a
 	// tenant: they are how a superadmin creates and selects tenants.
