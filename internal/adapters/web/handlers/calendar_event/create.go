@@ -42,7 +42,7 @@ func NewCreateHandler(uc ucCalendar.CreateUsecase) gin.HandlerFunc {
 		}
 
 		userID := middlewares.GetUserID(c)
-		output, appErr := uc.Execute(c, userID, ucCalendar.CreateInput{
+		output, appErr := uc.Execute(c, userID, middlewares.IsSuperAdmin(c), ucCalendar.CreateInput{
 			CourseID:        input.CourseID,
 			AttendeeIDs:     input.AttendeeIDs,
 			Title:           input.Title,

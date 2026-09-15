@@ -16,7 +16,10 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 		return apperrors.NewBadRequestError("assignment not found")
 	}
 	course, e := a.Repositories.Course.Get(c, task.CourseID)
-	if e != nil || !campusaccess.CanManageCourse(c, course.OwnerID, uid, sa) {
+	if e != nil {
+		return apperrors.NewInternalError(e)
+	}
+	if course == nil || !campusaccess.CanManageCourse(c, course.OwnerID, uid, sa) {
 		return apperrors.NewForbiddenError()
 	}
 	sum := 0

@@ -30,7 +30,7 @@ func NewUpdateHandler(uc ucCalendar.UpdateUsecase) gin.HandlerFunc {
 				return
 			}
 		}
-		output, appErr := uc.Execute(c, middlewares.GetUserID(c), c.Param("id"), ucCalendar.CreateInput{CourseID: input.CourseID, AttendeeIDs: input.AttendeeIDs, Title: input.Title, Description: input.Description, StartsAt: startsAt, EndsAt: endsAt, AllDay: input.AllDay, RecurrenceRule: input.RecurrenceRule, ReminderMinutes: input.ReminderMinutes})
+		output, appErr := uc.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"), ucCalendar.CreateInput{CourseID: input.CourseID, AttendeeIDs: input.AttendeeIDs, Title: input.Title, Description: input.Description, StartsAt: startsAt, EndsAt: endsAt, AllDay: input.AllDay, RecurrenceRule: input.RecurrenceRule, ReminderMinutes: input.ReminderMinutes})
 		if appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)

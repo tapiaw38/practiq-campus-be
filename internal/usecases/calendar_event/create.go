@@ -14,7 +14,7 @@ import (
 
 type (
 	CreateUsecase interface {
-		Execute(context.Context, string, CreateInput) (*CreateOutput, apperrors.ApplicationError)
+		Execute(context.Context, string, bool, CreateInput) (*CreateOutput, apperrors.ApplicationError)
 	}
 
 	createUsecase struct {
@@ -42,7 +42,7 @@ func NewCreateUsecase(contextFactory appcontext.Factory) CreateUsecase {
 	return &createUsecase{contextFactory: contextFactory}
 }
 
-func (u *createUsecase) Execute(ctx context.Context, requesterID string, input CreateInput) (*CreateOutput, apperrors.ApplicationError) {
+func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, input CreateInput) (*CreateOutput, apperrors.ApplicationError) {
 	if strings.TrimSpace(input.Title) == "" {
 		return nil, apperrors.NewBadRequestError("title is required")
 	}
@@ -70,7 +70,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	if course == nil {
 		return nil, apperrors.NewNotFoundError("course not found")
 	}
-	if !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false) {
+	if !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, isSuperAdmin) {
 		return nil, apperrors.NewForbiddenError()
 	}
 	enrollments, err := app.Repositories.Enrollment.ListByCourse(ctx, *input.CourseID)

@@ -12,7 +12,7 @@ import (
 )
 
 type UpdateUsecase interface {
-	Execute(context.Context, string, string, CreateInput) (*UpdateOutput, apperrors.ApplicationError)
+	Execute(context.Context, string, bool, string, CreateInput) (*UpdateOutput, apperrors.ApplicationError)
 }
 type UpdateOutput struct {
 	Data EventData `json:"data"`
@@ -23,7 +23,7 @@ func NewUpdateUsecase(contextFactory appcontext.Factory) UpdateUsecase {
 	return &updateUsecase{contextFactory: contextFactory}
 }
 
-func (u *updateUsecase) Execute(ctx context.Context, requesterID, eventID string, input CreateInput) (*UpdateOutput, apperrors.ApplicationError) {
+func (u *updateUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, eventID string, input CreateInput) (*UpdateOutput, apperrors.ApplicationError) {
 	if appErr := validateInput(input); appErr != nil {
 		return nil, appErr
 	}
@@ -35,10 +35,10 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID, eventID string
 	if existing == nil {
 		return nil, apperrors.NewNotFoundError("event not found")
 	}
-	if existing.OwnerID != requesterID {
+	if !isSuperAdmin && existing.OwnerID != requesterID {
 		return nil, apperrors.NewForbiddenError()
 	}
-	attendees, appErr := validateCourseAndAttendees(ctx, app, requesterID, input.CourseID, input.AttendeeIDs)
+	attendees, appErr := validateCourseAndAttendees(ctx, app, requesterID, isSuperAdmin, input.CourseID, input.AttendeeIDs)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -87,7 +87,7 @@ func normalizeRecurrence(rule string) string {
 	return rule
 }
 
-func validateCourseAndAttendees(ctx context.Context, app *appcontext.Context, requesterID string, courseID *string, attendeeIDs []string) ([]string, apperrors.ApplicationError) {
+func validateCourseAndAttendees(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID *string, attendeeIDs []string) ([]string, apperrors.ApplicationError) {
 	course, err := app.Repositories.Course.Get(ctx, *courseID)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
@@ -95,7 +95,7 @@ func validateCourseAndAttendees(ctx context.Context, app *appcontext.Context, re
 	if course == nil {
 		return nil, apperrors.NewNotFoundError("course not found")
 	}
-	if !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false) {
+	if !campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, isSuperAdmin) {
 		return nil, apperrors.NewForbiddenError()
 	}
 	enrollments, err := app.Repositories.Enrollment.ListByCourse(ctx, *courseID)

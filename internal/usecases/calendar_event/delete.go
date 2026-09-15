@@ -10,14 +10,14 @@ import (
 )
 
 type DeleteUsecase interface {
-	Execute(context.Context, string, string) apperrors.ApplicationError
+	Execute(context.Context, string, bool, string) apperrors.ApplicationError
 }
 type deleteUsecase struct{ contextFactory appcontext.Factory }
 
 func NewDeleteUsecase(contextFactory appcontext.Factory) DeleteUsecase {
 	return &deleteUsecase{contextFactory: contextFactory}
 }
-func (u *deleteUsecase) Execute(ctx context.Context, requesterID, eventID string) apperrors.ApplicationError {
+func (u *deleteUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, eventID string) apperrors.ApplicationError {
 	app := u.contextFactory()
 	event, err := app.Repositories.CalendarEvent.Get(ctx, eventID)
 	if err != nil {
@@ -26,7 +26,7 @@ func (u *deleteUsecase) Execute(ctx context.Context, requesterID, eventID string
 	if event == nil {
 		return apperrors.NewNotFoundError("event not found")
 	}
-	if event.OwnerID != requesterID {
+	if !isSuperAdmin && event.OwnerID != requesterID {
 		return apperrors.NewForbiddenError()
 	}
 	if err := app.Repositories.CalendarEvent.Delete(ctx, eventID); err != nil {

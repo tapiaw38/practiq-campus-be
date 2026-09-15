@@ -10,7 +10,7 @@ import (
 
 func NewDeleteHandler(uc ucCalendar.DeleteUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if appErr := uc.Execute(c, middlewares.GetUserID(c), c.Param("id")); appErr != nil {
+		if appErr := uc.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id")); appErr != nil {
 			appErr.Log(c)
 			c.JSON(appErr.StatusCode(), appErr)
 			return
