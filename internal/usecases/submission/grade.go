@@ -2,8 +2,12 @@ package submission
 
 import (
 	"context"
-	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
+	"errors"
 	"strings"
+
+	rubricrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/rubric"
+	submissionrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/submission"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
@@ -21,8 +25,13 @@ type (
 	}
 
 	GradeInput struct {
-		Score        int
-		Feedback     string
+		Score    int
+		Feedback string
+		// Version is the submission the teacher actually reviewed. Zero means
+		// the client did not send one, which is accepted as "whatever is
+		// current" so older clients keep working — they simply do not get the
+		// protection.
+		Version      int
 		RubricScores []RubricScoreInput
 	}
 
@@ -70,6 +79,13 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 		}
 	}
 
+	// A client that sends no version is grading whatever is current; one that
+	// does is grading the version it read, and loses if that moved.
+	expectedVersion := input.Version
+	if expectedVersion == 0 {
+		expectedVersion = s.Version
+	}
+
 	criteria, err := app.Repositories.Rubric.List(ctx, a.ID)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
@@ -78,7 +94,10 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 		if input.Score < 0 || input.Score > a.MaxScore {
 			return nil, apperrors.NewBadRequestError("score must be between 0 and the assignment's max score")
 		}
-		if err := app.Repositories.Submission.Grade(ctx, submissionID, input.Score, input.Feedback); err != nil {
+		if err := app.Repositories.Submission.Grade(ctx, submissionID, input.Score, input.Feedback, expectedVersion); err != nil {
+			if errors.Is(err, submissionrepo.ErrSubmissionChanged) {
+				return nil, apperrors.NewBadRequestError("el alumno reenvió la entrega mientras la corregías: volvé a abrirla para revisar la versión nueva")
+			}
 			return nil, apperrors.NewApplicationError(mappings.SubmissionCreateError, err)
 		}
 	} else {
@@ -110,7 +129,10 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 		if total > a.MaxScore {
 			return nil, apperrors.NewBadRequestError("la rúbrica suma más que el puntaje máximo de la tarea: revisala antes de corregir")
 		}
-		if err := app.Repositories.Rubric.Grade(ctx, submissionID, total, input.Feedback, scores); err != nil {
+		if err := app.Repositories.Rubric.Grade(ctx, submissionID, total, input.Feedback, scores, expectedVersion); err != nil {
+			if errors.Is(err, rubricrepo.ErrSubmissionChanged) {
+				return nil, apperrors.NewBadRequestError("el alumno reenvió la entrega mientras la corregías: volvé a abrirla para revisar la versión nueva")
+			}
 			return nil, apperrors.NewApplicationError(mappings.SubmissionCreateError, err)
 		}
 	}

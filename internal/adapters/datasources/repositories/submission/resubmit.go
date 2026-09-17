@@ -18,6 +18,10 @@ var ErrSubmissionGraded = errors.New("submission has already been graded")
 // being locked.
 var ErrSubmissionGone = errors.New("submission no longer exists")
 
+// ErrSubmissionChanged means the student resubmitted while the teacher was
+// grading, so the grade would have landed on content the teacher never read.
+var ErrSubmissionChanged = errors.New("submission changed while being graded")
+
 // Resubmit keeps one canonical delivery per student/activity while preserving
 // teacher feedback only until the student explicitly sends a new version.
 //
@@ -69,9 +73,12 @@ func (r *repository) Resubmit(ctx context.Context, id, content string) error {
 	// The same condition again in the write: if a grade landed between the
 	// lock being taken and this statement — impossible while the lock holds,
 	// but free to assert — the update simply does not match.
+	// version moves with the content, so a grade written against the version
+	// the teacher read will no longer match once this lands.
 	result, err := tx.ExecContext(ctx, `
 		UPDATE submissions
-		SET content = $1, status = 'submitted', score = NULL, feedback = '', graded_at = NULL, submitted_at = NOW()
+		SET content = $1, status = 'submitted', score = NULL, feedback = '', graded_at = NULL,
+		    submitted_at = NOW(), version = version + 1
 		WHERE id = $2 AND graded_at IS NULL`, content, id)
 	if err != nil {
 		return err

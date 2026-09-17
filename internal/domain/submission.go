@@ -16,10 +16,14 @@ type Submission struct {
 	AssignmentID string
 	UserID       string
 	UserName     string
-	Content      string
-	Status       string
-	Score        *int
-	Feedback     string
-	SubmittedAt  time.Time
-	GradedAt     *time.Time
+	Content string
+	Status  string
+	// Version increments on every resubmission. A grade carries the version
+	// it was written against, so a teacher who reviewed one version cannot
+	// have their grade applied to a newer one the student sent meanwhile.
+	Version     int
+	Score       *int
+	Feedback    string
+	SubmittedAt time.Time
+	GradedAt    *time.Time
 }

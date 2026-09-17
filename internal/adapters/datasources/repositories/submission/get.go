@@ -11,7 +11,7 @@ import (
 // Qualified for the tenant chain: submissions reach an institution through
 // their assignment's course, two hops away.
 const selectQualifiedSubmissionColumns = `
-	s.id, s.assignment_id, s.user_id, s.content, s.status, s.score, s.feedback, s.submitted_at, s.graded_at
+	s.id, s.assignment_id, s.user_id, s.content, s.status, s.version, s.score, s.feedback, s.submitted_at, s.graded_at
 `
 
 // tenantChain is the path every submission query walks: submission → assignment
@@ -24,7 +24,7 @@ func tenantChain(ctx context.Context) *tenantcontext.Query {
 
 func scanSubmission(row interface{ Scan(...any) error }) (*domain.Submission, error) {
 	var s domain.Submission
-	err := row.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.Content, &s.Status, &s.Score,
+	err := row.Scan(&s.ID, &s.AssignmentID, &s.UserID, &s.Content, &s.Status, &s.Version, &s.Score,
 		&s.Feedback, &s.SubmittedAt, &s.GradedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil

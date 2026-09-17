@@ -46,6 +46,7 @@ type SubmissionData struct {
 	UserName     string            `json:"user_name"`
 	Content      string            `json:"content"`
 	Status       string            `json:"status"`
+	Version      int               `json:"version"`
 	Score        *int              `json:"score"`
 	Feedback     string            `json:"feedback"`
 	SubmittedAt  string            `json:"submitted_at"`
@@ -138,6 +139,7 @@ func toSubmissionData(s domain.Submission) SubmissionData {
 		UserName:     s.UserName,
 		Content:      s.Content,
 		Status:       s.Status,
+		Version:      s.Version,
 		Score:        s.Score,
 		Feedback:     s.Feedback,
 		SubmittedAt:  s.SubmittedAt.Format("2006-01-02T15:04:05Z"),

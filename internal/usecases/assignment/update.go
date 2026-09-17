@@ -61,6 +61,27 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 	// under a rubric still totalling 100 left grading able to record 100 out
 	// of 10, and silently reinterpreted every grade already given.
 	if in.MaxScore != x.MaxScore {
+		// A grade is a number out of the maximum in force when it was given.
+		// Moving the maximum afterwards rewrites every one of them at once —
+		// 90/100 silently becomes 90/10 — so work already corrected freezes
+		// it. Regrading deliberately is a decision, not a side effect of
+		// editing a title.
+		graded, e := a.Repositories.Submission.ListByAssignment(ctx, id)
+		if e != nil {
+			return nil, apperrors.NewInternalError(e)
+		}
+		for _, s := range graded {
+			if s.GradedAt != nil {
+				return nil, apperrors.NewBadRequestError(
+					"ya hay entregas corregidas con este puntaje máximo: no se puede cambiar sin invalidar esas notas")
+			}
+		}
+
+		// With a rubric present the criteria define the maximum, so it is
+		// changed from the rubric editor — which updates both together —
+		// rather than here. Rejecting without saying that left no legal move
+		// at all: the rubric demanded the old maximum and the maximum
+		// demanded the old rubric total.
 		criteria, e := a.Repositories.Rubric.List(ctx, id)
 		if e != nil {
 			return nil, apperrors.NewInternalError(e)
@@ -72,7 +93,7 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 			}
 			if sum != in.MaxScore {
 				return nil, apperrors.NewBadRequestError(
-					"la rúbrica suma " + strconv.Itoa(sum) + " puntos: ajustá la rúbrica antes de cambiar el puntaje máximo")
+					"la rúbrica define el puntaje máximo (" + strconv.Itoa(sum) + " puntos): cambialo editando la rúbrica")
 			}
 		}
 	}

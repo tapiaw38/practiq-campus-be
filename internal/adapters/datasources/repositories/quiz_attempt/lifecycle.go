@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lib/pq"
+
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 )
 
@@ -30,6 +32,13 @@ var ErrNotYourAttempt = errors.New("attempt belongs to another user")
 // It never blocks resuming: an attempt already running carries its own
 // deadline, fixed when it started.
 var ErrQuizWindowClosed = errors.New("quiz is not open for new attempts")
+
+// ErrForeignQuestion means the batch named a question that is not part of the
+// attempt's quiz, or named the same one twice.
+var ErrForeignQuestion = errors.New("answers reference questions outside this quiz")
+
+// attemptColumns is the row as the domain expects it, in scan order.
+const attemptColumns = `id, quiz_id, user_id, attempt_number, started_at, expires_at, submitted_at, score, max_score`
 
 type (
 	// StartParams is what the quiz permits, resolved by the use case before
@@ -113,8 +122,6 @@ func (r *repository) StartOrResume(ctx context.Context, p StartParams) (*StartRe
 	if !belongs {
 		return nil, ErrQuizNotInTenant
 	}
-
-	const attemptColumns = `id, quiz_id, user_id, attempt_number, started_at, expires_at, submitted_at, score, max_score`
 
 	live, err := scanAttempt(tx.QueryRowContext(ctx, `
 		SELECT `+attemptColumns+`
@@ -219,6 +226,10 @@ func (r *repository) SaveDraft(ctx context.Context, attemptID, userID string, an
 		return ErrAttemptExpired
 	}
 
+	if err = assertQuestionsBelongTo(ctx, tx, locked.QuizID, answers); err != nil {
+		return err
+	}
+
 	for _, a := range answers {
 		// is_correct stays false here; grading happens once, at submission.
 		if _, err = tx.ExecContext(ctx, `
@@ -231,6 +242,114 @@ func (r *repository) SaveDraft(ctx context.Context, attemptID, userID string, an
 		}
 	}
 	return tx.Commit()
+}
+
+// assertQuestionsBelongTo refuses a batch naming any question that is not part
+// of this quiz.
+//
+// The foreign key only proves a question exists somewhere; it says nothing
+// about which quiz, or which institution. Without this, a student could post
+// a draft citing a question id belonging to another quiz — another tenant's,
+// even — and have the row accepted, attaching an answer to a question the
+// attempt has nothing to do with. Checked as a set so a bad batch writes
+// nothing rather than partially.
+func assertQuestionsBelongTo(ctx context.Context, tx *sql.Tx, quizID string, answers []domain.QuizAnswer) error {
+	if len(answers) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(answers))
+	seen := make(map[string]bool, len(answers))
+	for _, a := range answers {
+		if seen[a.QuestionID] {
+			// The upsert would apply both rows in order, making the result
+			// depend on batch ordering. Reject instead of guessing.
+			return ErrForeignQuestion
+		}
+		seen[a.QuestionID] = true
+		ids = append(ids, a.QuestionID)
+	}
+
+	var matching int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = $1 AND id = ANY($2)`,
+		quizID, pq.Array(ids)).Scan(&matching); err != nil {
+		return err
+	}
+	if matching != len(ids) {
+		return ErrForeignQuestion
+	}
+	return nil
+}
+
+// FinalizeExpired closes an attempt whose deadline passed without a
+// submission, recording the grade for whatever was stored.
+//
+// Drafts made the work survive, but nothing ever settled those attempts: they
+// stayed open forever, and the review screen hides answers until an attempt
+// is submitted, so a student who ran out of time had their work saved and
+// invisible — to them and to the teacher. Time running out is an ending, and
+// this is what makes it one.
+//
+// Idempotent, and safe to call from any read: the UPDATE only matches an
+// attempt that is still open and genuinely past its deadline, so racing
+// callers produce one closure and a live attempt is never touched. Returns
+// nil when there was nothing to finalize.
+func (r *repository) FinalizeExpired(ctx context.Context, attemptID string, answers []domain.QuizAnswer, score, maxScore int) (*domain.QuizAttempt, error) {
+	guard, tenantID, err := attemptGuard(ctx, "$1", 2)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var belongs bool
+	if err = tx.QueryRowContext(ctx, `SELECT `+guard, attemptID, tenantID).Scan(&belongs); err != nil {
+		return nil, err
+	}
+	if !belongs {
+		return nil, ErrQuizNotInTenant
+	}
+
+	locked, err := scanAttempt(tx.QueryRowContext(ctx,
+		`SELECT `+attemptColumns+` FROM quiz_attempts WHERE id = $1 FOR UPDATE`, attemptID))
+	if err != nil {
+		return nil, err
+	}
+	// Someone else finalized it, or it is not actually over: either way there
+	// is nothing to do, and saying so is not an error.
+	if locked == nil || locked.SubmittedAt != nil || !locked.Expired(time.Now()) {
+		return nil, nil
+	}
+
+	// Grades what the student managed to save. Answers they never got to are
+	// simply absent, which is the same as leaving them blank.
+	for _, a := range answers {
+		if _, err = tx.ExecContext(ctx, `
+			UPDATE quiz_answers SET is_correct = $1
+			WHERE attempt_id = $2 AND question_id = $3
+		`, a.IsCorrect, attemptID, a.QuestionID); err != nil {
+			return nil, err
+		}
+	}
+
+	updated, err := scanAttempt(tx.QueryRowContext(ctx, `
+		UPDATE quiz_attempts SET submitted_at = NOW(), score = $1, max_score = $2
+		WHERE id = $3 AND submitted_at IS NULL AND expires_at IS NOT NULL AND expires_at <= NOW()
+		RETURNING `+attemptColumns, score, maxScore, attemptID))
+	if err != nil {
+		return nil, err
+	}
+	if updated == nil {
+		return nil, nil
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
 // SubmitGraded writes the answers and closes the attempt as one unit.
@@ -266,8 +385,6 @@ func (r *repository) SubmitGraded(ctx context.Context, attemptID, userID string,
 	if !belongs {
 		return nil, ErrQuizNotInTenant
 	}
-
-	const attemptColumns = `id, quiz_id, user_id, attempt_number, started_at, expires_at, submitted_at, score, max_score`
 
 	locked, err := scanAttempt(tx.QueryRowContext(ctx,
 		`SELECT `+attemptColumns+` FROM quiz_attempts WHERE id = $1 FOR UPDATE`, attemptID))

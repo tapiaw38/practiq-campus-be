@@ -31,8 +31,8 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 		sum += v.MaxScore
 		out = append(out, domain.RubricCriterion{Title: v.Title, Description: v.Description, MaxScore: v.MaxScore})
 	}
-	if sum != task.MaxScore {
-		return apperrors.NewBadRequestError("rubric total must equal max score")
+	if len(out) == 0 {
+		return apperrors.NewBadRequestError("la rúbrica necesita al menos un criterio")
 	}
 	submissions, e := a.Repositories.Submission.ListByAssignment(c, id)
 	if e != nil {
@@ -45,6 +45,17 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 	}
 	if e = a.Repositories.Rubric.Replace(c, id, out); e != nil {
 		return apperrors.NewInternalError(e)
+	}
+	// The rubric's total *is* the maximum, so editing it moves the maximum
+	// with it. Demanding they already match instead left no way to change
+	// either: the rubric required the old maximum, and the maximum required
+	// the old rubric total. Safe to do here because grading this assignment
+	// has not started — the loop above refuses otherwise.
+	if sum != task.MaxScore {
+		task.MaxScore = sum
+		if e = a.Repositories.Assignment.Update(c, id, *task); e != nil {
+			return apperrors.NewInternalError(e)
+		}
 	}
 	return nil
 }

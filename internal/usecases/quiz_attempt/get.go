@@ -58,6 +58,15 @@ func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdm
 		}
 	}
 
+	// An attempt whose time ran out is settled here if nobody has settled it
+	// yet, so what follows sees a finished attempt and shows the work instead
+	// of hiding it behind a submitted_at that was never going to arrive.
+	settled, err := finalizeIfExpired(ctx, app, *attempt)
+	if err != nil {
+		return nil, apperrors.NewInternalError(err)
+	}
+	attempt = &settled
+
 	results := make([]AnswerResultData, 0)
 	if attempt.SubmittedAt != nil {
 		questions, err := app.Repositories.Quiz.ListQuestions(ctx, attempt.QuizID)

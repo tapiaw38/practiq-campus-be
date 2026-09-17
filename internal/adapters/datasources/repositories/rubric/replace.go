@@ -12,6 +12,10 @@ import (
 // another institution.
 var ErrNotInTenant = errors.New("resource does not belong to this tenant")
 
+// ErrSubmissionChanged means the student resubmitted while the teacher was
+// grading, so the grade would have landed on content the teacher never read.
+var ErrSubmissionChanged = errors.New("submission changed while being graded")
+
 // Replace clears the rubric before rewriting it, so the tenant is checked
 // before the delete: an assignment id from another institution would otherwise
 // erase its criteria.

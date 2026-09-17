@@ -9,7 +9,10 @@ import (
 
 // Grade writes marks onto a student's work, so the submission is confirmed to
 // belong to this institution before anything is written.
-func (r *repository) Grade(c context.Context, s string, total int, feedback string, in []domain.RubricScore) (e error) {
+// expectedVersion is the submission version the teacher graded; if the
+// student resubmitted meanwhile the update matches nothing and the caller is
+// told the work changed rather than marking content nobody reviewed.
+func (r *repository) Grade(c context.Context, s string, total int, feedback string, in []domain.RubricScore, expectedVersion int) (e error) {
 	guard, tenantID, e := tenantcontext.ExistsIn(c,
 		"submissions sub JOIN assignments asg ON asg.id = sub.assignment_id JOIN courses co ON co.id = asg.course_id",
 		"sub.id = $1", "co.tenant_id", 2)
@@ -37,7 +40,13 @@ func (r *repository) Grade(c context.Context, s string, total int, feedback stri
 			return
 		}
 	}
-	_, e = tx.ExecContext(c, `UPDATE submissions SET score=$1,feedback=$2,status='graded',graded_at=NOW() WHERE id=$3`, total, feedback, s)
+	res, e := tx.ExecContext(c, `UPDATE submissions SET score=$1,feedback=$2,status='graded',graded_at=NOW() WHERE id=$3 AND version=$4`, total, feedback, s, expectedVersion)
+	if e != nil {
+		return
+	}
+	if affected, err := res.RowsAffected(); err == nil && affected == 0 {
+		return ErrSubmissionChanged
+	}
 	if e != nil {
 		return
 	}

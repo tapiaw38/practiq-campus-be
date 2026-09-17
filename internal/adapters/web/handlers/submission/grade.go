@@ -9,8 +9,12 @@ import (
 )
 
 type gradeInput struct {
-	Score        int    `json:"score"`
-	Feedback     string `json:"feedback"`
+	Score    int    `json:"score"`
+	Feedback string `json:"feedback"`
+	// Version of the submission the teacher reviewed. Optional: omitted means
+	// "grade whatever is current", which is how clients behaved before this
+	// existed.
+	Version      int `json:"version"`
 	RubricScores []struct {
 		CriterionID string `json:"criterion_id"`
 		Score       int    `json:"score"`
@@ -32,6 +36,7 @@ func NewGradeHandler(uc ucSubmission.GradeUsecase) gin.HandlerFunc {
 		output, appErr := uc.Execute(c, userID, isSuperAdmin, submissionID, ucSubmission.GradeInput{
 			Score:    input.Score,
 			Feedback: input.Feedback,
+			Version:  input.Version,
 			RubricScores: func() []ucSubmission.RubricScoreInput {
 				out := make([]ucSubmission.RubricScoreInput, 0, len(input.RubricScores))
 				for _, score := range input.RubricScores {

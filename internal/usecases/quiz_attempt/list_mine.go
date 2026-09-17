@@ -26,9 +26,18 @@ func NewListMineUsecase(contextFactory appcontext.Factory) ListMineUsecase {
 }
 
 func (u *listMineUsecase) Execute(ctx context.Context, requesterID, quizID string) (*ListOutput, apperrors.ApplicationError) {
-	attempts, err := u.contextFactory().Repositories.QuizAttempt.ListMine(ctx, quizID, requesterID)
+	app := u.contextFactory()
+	attempts, err := app.Repositories.QuizAttempt.ListMine(ctx, quizID, requesterID)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
 	}
+	// Settles anything the clock ended, so the student sees the grade for
+	// what they saved rather than an attempt that looks perpetually open and
+	// blocks the count of tries left.
+	attempts, err = finalizeExpiredIn(ctx, app, attempts)
+	if err != nil {
+		return nil, apperrors.NewInternalError(err)
+	}
+
 	return &ListOutput{Data: toAttemptDataList(attempts)}, nil
 }
