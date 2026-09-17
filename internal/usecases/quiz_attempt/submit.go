@@ -147,7 +147,7 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 			Type:   "quiz_submitted",
 			Title:  "Entrega de evaluación: " + q.Title,
 			Body:   "Un alumno completó la evaluación",
-			Data:   `{"quiz_id":"` + q.ID + `","attempt_id":"` + attemptID + `"}`,
+			Data:   `{"quiz_id":"` + q.ID + `","attempt_id":"` + attemptID + `","course_id":"` + q.CourseID + `"}`,
 		})
 	}
 

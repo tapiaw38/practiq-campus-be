@@ -144,7 +144,7 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 	if updated == nil {
 		return nil, apperrors.NewInternalError(nil)
 	}
-	_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: updated.UserID, Type: "submission_graded", Title: "Tarea corregida: " + a.Title, Body: "Tu docente publicó una calificación", Data: `{"submission_id":"` + updated.ID + `","assignment_id":"` + a.ID + `"}`})
+	_ = app.Repositories.Notification.Create(ctx, domain.Notification{UserID: updated.UserID, Type: "submission_graded", Title: "Tarea corregida: " + a.Title, Body: "Tu docente publicó una calificación", Data: `{"submission_id":"` + updated.ID + `","assignment_id":"` + a.ID + `","course_id":"` + a.CourseID + `"}`})
 
 	data := toSubmissionData(*updated)
 	scores, err := app.Repositories.Rubric.Scores(ctx, submissionID)
