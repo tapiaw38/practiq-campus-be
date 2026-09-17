@@ -21,12 +21,12 @@ type (
 	}
 
 	UpdateInput struct {
-		SectionID       *string
-		Title           string
-		Description     string
-		TimeLimitSecs   *int
-		MaxAttempts     int
-		ScheduledAt     *time.Time
+		SectionID     *string
+		Title         string
+		Description   string
+		TimeLimitSecs *int
+		MaxAttempts   int
+		ScheduledAt   *time.Time
 		// ScheduledAtSet reports whether the request mentioned the field at
 		// all. Without it, an update that simply did not carry the dates was
 		// indistinguishable from one clearing them, and saving a title wiped
@@ -34,10 +34,10 @@ type (
 		ScheduledAtSet    bool
 		AvailableUntil    *time.Time
 		AvailableUntilSet bool
-		Weight          int
-		VisibleGroupID  *string
-		UnlockAfterType *string
-		UnlockAfterID   *string
+		Weight            int
+		VisibleGroupID    *string
+		UnlockAfterType   *string
+		UnlockAfterID     *string
 	}
 
 	UpdateOutput struct {

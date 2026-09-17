@@ -23,7 +23,7 @@ type Repository interface {
 	// FinalizeExpired settles an attempt whose deadline passed unsubmitted,
 	// grading whatever was saved. Idempotent and a no-op on a live attempt,
 	// so read paths can call it freely.
-	FinalizeExpired(ctx context.Context, attemptID string, answers []domain.QuizAnswer, score, maxScore int) (*domain.QuizAttempt, error)
+	FinalizeExpired(ctx context.Context, attemptID string) (*domain.QuizAttempt, error)
 	SubmitGraded(ctx context.Context, attemptID, userID string, answers []domain.QuizAnswer, score, maxScore int) (*domain.QuizAttempt, error)
 
 	ListAnswers(context.Context, string) ([]domain.QuizAnswer, error)

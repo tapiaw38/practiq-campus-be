@@ -17,20 +17,20 @@ func NewUpdateHandler(uc ucQuiz.UpdateUsecase) gin.HandlerFunc {
 		}
 
 		output, appErr := uc.Execute(c, middlewares.GetUserID(c), middlewares.IsSuperAdmin(c), c.Param("id"), ucQuiz.UpdateInput{
-			SectionID:       input.SectionID,
-			Title:           input.Title,
-			Description:     input.Description,
-			TimeLimitSecs:   input.TimeLimitSecs,
-			MaxAttempts:     input.MaxAttempts,
+			SectionID:     input.SectionID,
+			Title:         input.Title,
+			Description:   input.Description,
+			TimeLimitSecs: input.TimeLimitSecs,
+			MaxAttempts:   input.MaxAttempts,
 			// Absent means "leave as it is"; present-and-null means clear.
-			ScheduledAt:        parseDateTime(input.ScheduledAt.Value),
-			ScheduledAtSet:     input.ScheduledAt.Present,
-			AvailableUntil:     parseDateTime(input.AvailableUntil.Value),
-			AvailableUntilSet:  input.AvailableUntil.Present,
-			Weight:          input.Weight,
-			VisibleGroupID:  input.VisibleGroupID,
-			UnlockAfterType: input.UnlockAfterType,
-			UnlockAfterID:   input.UnlockAfterID,
+			ScheduledAt:       parseDateTime(input.ScheduledAt.Value),
+			ScheduledAtSet:    input.ScheduledAt.Present,
+			AvailableUntil:    parseDateTime(input.AvailableUntil.Value),
+			AvailableUntilSet: input.AvailableUntil.Present,
+			Weight:            input.Weight,
+			VisibleGroupID:    input.VisibleGroupID,
+			UnlockAfterType:   input.UnlockAfterType,
+			UnlockAfterID:     input.UnlockAfterID,
 		})
 		if appErr != nil {
 			appErr.Log(c)

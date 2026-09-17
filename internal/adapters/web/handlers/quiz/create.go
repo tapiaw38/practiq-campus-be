@@ -10,17 +10,17 @@ import (
 )
 
 type createInput struct {
-	SectionID       *string `json:"section_id"`
-	Title           string  `json:"title" binding:"required"`
-	Description     string  `json:"description"`
-	TimeLimitSecs   *int    `json:"time_limit_secs"`
-	MaxAttempts     int     `json:"max_attempts"`
+	SectionID       *string        `json:"section_id"`
+	Title           string         `json:"title" binding:"required"`
+	Description     string         `json:"description"`
+	TimeLimitSecs   *int           `json:"time_limit_secs"`
+	MaxAttempts     int            `json:"max_attempts"`
 	ScheduledAt     optionalString `json:"scheduled_at"`
 	AvailableUntil  optionalString `json:"available_until"`
-	Weight          int     `json:"weight"`
-	VisibleGroupID  *string `json:"visible_group_id"`
-	UnlockAfterType *string `json:"unlock_after_type"`
-	UnlockAfterID   *string `json:"unlock_after_id"`
+	Weight          int            `json:"weight"`
+	VisibleGroupID  *string        `json:"visible_group_id"`
+	UnlockAfterType *string        `json:"unlock_after_type"`
+	UnlockAfterID   *string        `json:"unlock_after_id"`
 }
 
 func parseDateTime(v *string) *time.Time {

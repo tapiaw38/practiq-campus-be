@@ -109,4 +109,3 @@ func (r *repository) ListMine(ctx context.Context, quizID, userID string) ([]dom
 	}
 	return scanAttempts(rows)
 }
-

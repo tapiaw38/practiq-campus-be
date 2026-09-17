@@ -33,12 +33,12 @@ func toStudentQuestionData(questions []domain.QuizQuestion) []StudentQuestionDat
 }
 
 type AttemptData struct {
-	ID            string  `json:"id"`
-	QuizID        string  `json:"quiz_id"`
-	UserID        string  `json:"user_id"`
-	UserName      string  `json:"user_name,omitempty"`
-	AttemptNumber int     `json:"attempt_number"`
-	StartedAt     string  `json:"started_at"`
+	ID            string `json:"id"`
+	QuizID        string `json:"quiz_id"`
+	UserID        string `json:"user_id"`
+	UserName      string `json:"user_name,omitempty"`
+	AttemptNumber int    `json:"attempt_number"`
+	StartedAt     string `json:"started_at"`
 	// ExpiresAt is the server's deadline for this attempt; null when untimed.
 	// The client counts down to it instead of to its own start time, so a
 	// clock the student can change does not extend the exam, and a resumed

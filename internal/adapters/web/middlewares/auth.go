@@ -40,7 +40,13 @@ func AuthMiddleware(profiles profileRepo.Repository, checker *revocation.Checker
 			c.Abort()
 			return
 		}
-		if profile, err := profiles.Get(c, claims.UserID); err == nil && profile != nil && profile.IsBlocked {
+		profile, profileErr := profiles.Get(c, claims.UserID)
+		if profileErr != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "profile:unavailable", "message": "could not verify account status"})
+			c.Abort()
+			return
+		}
+		if profile != nil && profile.IsBlocked {
 			c.JSON(http.StatusForbidden, gin.H{"code": "profile:blocked", "message": "account is blocked in Campus"})
 			c.Abort()
 			return

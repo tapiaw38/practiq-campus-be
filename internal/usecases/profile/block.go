@@ -39,7 +39,10 @@ func (u *blockUsecase) Execute(ctx context.Context, requesterID, userID string, 
 
 	names, err := identity.Names(ctx, app.Integrations.AuthAPI, bearerToken, []string{userID})
 	if err != nil {
-		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
+		// Blocking already committed. Do not report a false failure that makes
+		// the admin retry the mutation; return local profile data and let the
+		// next list refresh resolve the display name.
+		return &BlockOutput{Data: toProfileData(*profile, userID, "")}, nil
 	}
 	info := names[userID]
 

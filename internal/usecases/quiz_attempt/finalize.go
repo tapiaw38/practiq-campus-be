@@ -2,6 +2,7 @@ package quiz_attempt
 
 import (
 	"context"
+	"time"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
@@ -25,47 +26,13 @@ import (
 // Returns the attempt to display: the finalized one when it just closed, or
 // the original unchanged.
 func finalizeIfExpired(ctx context.Context, app *appcontext.Context, attempt domain.QuizAttempt) (domain.QuizAttempt, error) {
-	if attempt.SubmittedAt != nil || attempt.ExpiresAt == nil {
+	if attempt.SubmittedAt != nil || !attempt.Expired(time.Now()) {
 		return attempt, nil
 	}
 
-	questions, err := app.Repositories.Quiz.ListQuestions(ctx, attempt.QuizID)
-	if err != nil {
-		return attempt, err
-	}
-	stored, err := app.Repositories.QuizAttempt.ListAnswers(ctx, attempt.ID)
-	if err != nil {
-		return attempt, err
-	}
-
-	savedText := make(map[string]string, len(stored))
-	for _, a := range stored {
-		savedText[a.QuestionID] = a.AnswerText
-	}
-
-	// maxScore counts every question, not just the answered ones: leaving a
-	// question blank is worth zero, it does not shrink the exam.
-	score, maxScore := 0, 0
-	graded := make([]domain.QuizAnswer, 0, len(stored))
-	for _, question := range questions {
-		maxScore += question.Points
-		text, answered := savedText[question.ID]
-		if !answered {
-			continue
-		}
-		isCorrect := domain.GradeQuizAnswer(question, text)
-		if isCorrect {
-			score += question.Points
-		}
-		graded = append(graded, domain.QuizAnswer{
-			AttemptID:  attempt.ID,
-			QuestionID: question.ID,
-			AnswerText: text,
-			IsCorrect:  isCorrect,
-		})
-	}
-
-	finalized, err := app.Repositories.QuizAttempt.FinalizeExpired(ctx, attempt.ID, graded, score, maxScore)
+	// Read and grade the draft under the repository's attempt lock, so a
+	// save still committing at the deadline cannot be omitted from the grade.
+	finalized, err := app.Repositories.QuizAttempt.FinalizeExpired(ctx, attempt.ID)
 	if err != nil {
 		return attempt, err
 	}

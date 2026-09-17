@@ -293,8 +293,8 @@ func assertQuestionsBelongTo(ctx context.Context, tx *sql.Tx, quizID string, ans
 // Idempotent, and safe to call from any read: the UPDATE only matches an
 // attempt that is still open and genuinely past its deadline, so racing
 // callers produce one closure and a live attempt is never touched. Returns
-// nil when there was nothing to finalize.
-func (r *repository) FinalizeExpired(ctx context.Context, attemptID string, answers []domain.QuizAnswer, score, maxScore int) (*domain.QuizAttempt, error) {
+// the current row even when another caller already finalized it.
+func (r *repository) FinalizeExpired(ctx context.Context, attemptID string) (*domain.QuizAttempt, error) {
 	guard, tenantID, err := attemptGuard(ctx, "$1", 2)
 	if err != nil {
 		return nil, err
@@ -322,16 +322,49 @@ func (r *repository) FinalizeExpired(ctx context.Context, attemptID string, answ
 	// Someone else finalized it, or it is not actually over: either way there
 	// is nothing to do, and saying so is not an error.
 	if locked == nil || locked.SubmittedAt != nil || !locked.Expired(time.Now()) {
-		return nil, nil
+		return locked, nil
+	}
+
+	// Read the draft only after locking the attempt. A save that started
+	// before expiry may still be committing while finalization waits here.
+	rows, err := tx.QueryContext(ctx, `
+		SELECT q.id, q.type, q.statement, q.correct_answer, q.points, COALESCE(a.answer_text, '')
+		FROM quiz_questions q
+		LEFT JOIN quiz_answers a ON a.question_id = q.id AND a.attempt_id = $1
+		WHERE q.quiz_id = $2 ORDER BY q.position`, attemptID, locked.QuizID)
+	if err != nil {
+		return nil, err
+	}
+	var answers []domain.QuizAnswer
+	score, maxScore := 0, 0
+	for rows.Next() {
+		var question domain.QuizQuestion
+		var answer string
+		if err = rows.Scan(&question.ID, &question.Type, &question.Statement, &question.CorrectAnswer, &question.Points, &answer); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		correct := domain.GradeQuizAnswer(question, answer)
+		maxScore += question.Points
+		if correct {
+			score += question.Points
+		}
+		answers = append(answers, domain.QuizAnswer{QuestionID: question.ID, AnswerText: answer, IsCorrect: correct})
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
 	// Grades what the student managed to save. Answers they never got to are
 	// simply absent, which is the same as leaving them blank.
 	for _, a := range answers {
 		if _, err = tx.ExecContext(ctx, `
-			UPDATE quiz_answers SET is_correct = $1
-			WHERE attempt_id = $2 AND question_id = $3
-		`, a.IsCorrect, attemptID, a.QuestionID); err != nil {
+			INSERT INTO quiz_answers (attempt_id, question_id, answer_text, is_correct)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (attempt_id, question_id) DO UPDATE SET is_correct = EXCLUDED.is_correct
+		`, attemptID, a.QuestionID, a.AnswerText, a.IsCorrect); err != nil {
 			return nil, err
 		}
 	}
