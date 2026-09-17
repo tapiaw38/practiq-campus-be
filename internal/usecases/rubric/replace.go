@@ -2,7 +2,10 @@ package rubric
 
 import (
 	"context"
+	"errors"
 	"strings"
+
+	rubricrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/rubric"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -34,6 +37,9 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 	if len(out) == 0 {
 		return apperrors.NewBadRequestError("la rúbrica necesita al menos un criterio")
 	}
+	// The rubric and the maximum it adds up to are written together, and the
+	// repository re-checks under a lock that nothing has been graded — this
+	// read only fails fast in the ordinary case.
 	submissions, e := a.Repositories.Submission.ListByAssignment(c, id)
 	if e != nil {
 		return apperrors.NewInternalError(e)
@@ -43,19 +49,11 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 			return apperrors.NewBadRequestError("rubric cannot be changed after a submission is graded")
 		}
 	}
-	if e = a.Repositories.Rubric.Replace(c, id, out); e != nil {
-		return apperrors.NewInternalError(e)
-	}
-	// The rubric's total *is* the maximum, so editing it moves the maximum
-	// with it. Demanding they already match instead left no way to change
-	// either: the rubric required the old maximum, and the maximum required
-	// the old rubric total. Safe to do here because grading this assignment
-	// has not started — the loop above refuses otherwise.
-	if sum != task.MaxScore {
-		task.MaxScore = sum
-		if e = a.Repositories.Assignment.Update(c, id, *task); e != nil {
-			return apperrors.NewInternalError(e)
+	if e = a.Repositories.Rubric.Replace(c, id, out, sum); e != nil {
+		if errors.Is(e, rubricrepo.ErrAssignmentGraded) {
+			return apperrors.NewBadRequestError("rubric cannot be changed after a submission is graded")
 		}
+		return apperrors.NewInternalError(e)
 	}
 	return nil
 }

@@ -22,8 +22,11 @@ func NewUpdateHandler(uc ucQuiz.UpdateUsecase) gin.HandlerFunc {
 			Description:     input.Description,
 			TimeLimitSecs:   input.TimeLimitSecs,
 			MaxAttempts:     input.MaxAttempts,
-			ScheduledAt:     parseDateTime(input.ScheduledAt),
-			AvailableUntil:  parseDateTime(input.AvailableUntil),
+			// Absent means "leave as it is"; present-and-null means clear.
+			ScheduledAt:        parseDateTime(input.ScheduledAt.Value),
+			ScheduledAtSet:     input.ScheduledAt.Present,
+			AvailableUntil:     parseDateTime(input.AvailableUntil.Value),
+			AvailableUntilSet:  input.AvailableUntil.Present,
 			Weight:          input.Weight,
 			VisibleGroupID:  input.VisibleGroupID,
 			UnlockAfterType: input.UnlockAfterType,

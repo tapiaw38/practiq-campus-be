@@ -368,6 +368,11 @@ var (
 		Message:      "the file does not belong to you",
 	}
 
+	EnrollmentStudentNotInInstitutionError = ErrorDetails{
+		InternalCode: "enrollment:student-not-in-institution",
+		StatusCode:   http.StatusBadRequest,
+		Message:      "the student does not belong to this institution yet",
+	}
 	EnrollmentStudentNotFoundError = ErrorDetails{
 		InternalCode: "enrollment:student-not-found",
 		StatusCode:   http.StatusNotFound,

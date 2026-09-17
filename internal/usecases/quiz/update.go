@@ -27,7 +27,13 @@ type (
 		TimeLimitSecs   *int
 		MaxAttempts     int
 		ScheduledAt     *time.Time
-		AvailableUntil  *time.Time
+		// ScheduledAtSet reports whether the request mentioned the field at
+		// all. Without it, an update that simply did not carry the dates was
+		// indistinguishable from one clearing them, and saving a title wiped
+		// the quiz's schedule.
+		ScheduledAtSet    bool
+		AvailableUntil    *time.Time
+		AvailableUntilSet bool
 		Weight          int
 		VisibleGroupID  *string
 		UnlockAfterType *string
@@ -81,8 +87,12 @@ func (u *updateUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	existing.Description = input.Description
 	existing.TimeLimitSecs = input.TimeLimitSecs
 	existing.MaxAttempts = maxAttempts
-	existing.ScheduledAt = input.ScheduledAt
-	existing.AvailableUntil = input.AvailableUntil
+	if input.ScheduledAtSet {
+		existing.ScheduledAt = input.ScheduledAt
+	}
+	if input.AvailableUntilSet {
+		existing.AvailableUntil = input.AvailableUntil
+	}
 	existing.Weight = weight
 	existing.VisibleGroupID = input.VisibleGroupID
 	existing.UnlockAfterType = input.UnlockAfterType

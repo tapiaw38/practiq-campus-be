@@ -119,7 +119,9 @@ func (u *duplicateUsecase) Execute(ctx context.Context, requesterID string, isSu
 			for _, c := range criteria {
 				copied = append(copied, domain.RubricCriterion{Title: c.Title, Description: c.Description, MaxScore: c.MaxScore})
 			}
-			_ = app.Repositories.Rubric.Replace(ctx, newID, copied)
+			// The copy keeps the source's maximum, which the copied criteria
+			// already add up to.
+			_ = app.Repositories.Rubric.Replace(ctx, newID, copied, a.MaxScore)
 		}
 	}
 

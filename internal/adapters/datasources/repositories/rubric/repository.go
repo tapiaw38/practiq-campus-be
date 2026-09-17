@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	List(context.Context, string) ([]domain.RubricCriterion, error)
-	Replace(context.Context, string, []domain.RubricCriterion) error
+	Replace(ctx context.Context, assignmentID string, criteria []domain.RubricCriterion, maxScore int) error
 	Grade(ctx context.Context, submissionID string, total int, feedback string, scores []domain.RubricScore, expectedVersion int) error
 	Scores(context.Context, string) ([]domain.RubricScore, error)
 }

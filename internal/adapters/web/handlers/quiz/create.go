@@ -15,8 +15,8 @@ type createInput struct {
 	Description     string  `json:"description"`
 	TimeLimitSecs   *int    `json:"time_limit_secs"`
 	MaxAttempts     int     `json:"max_attempts"`
-	ScheduledAt     *string `json:"scheduled_at"`
-	AvailableUntil  *string `json:"available_until"`
+	ScheduledAt     optionalString `json:"scheduled_at"`
+	AvailableUntil  optionalString `json:"available_until"`
 	Weight          int     `json:"weight"`
 	VisibleGroupID  *string `json:"visible_group_id"`
 	UnlockAfterType *string `json:"unlock_after_type"`
@@ -51,8 +51,8 @@ func NewCreateHandler(uc ucQuiz.CreateUsecase) gin.HandlerFunc {
 			Description:     input.Description,
 			TimeLimitSecs:   input.TimeLimitSecs,
 			MaxAttempts:     input.MaxAttempts,
-			ScheduledAt:     parseDateTime(input.ScheduledAt),
-			AvailableUntil:  parseDateTime(input.AvailableUntil),
+			ScheduledAt:     parseDateTime(input.ScheduledAt.Value),
+			AvailableUntil:  parseDateTime(input.AvailableUntil.Value),
 			Weight:          input.Weight,
 			VisibleGroupID:  input.VisibleGroupID,
 			UnlockAfterType: input.UnlockAfterType,

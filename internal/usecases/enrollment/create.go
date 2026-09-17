@@ -8,6 +8,7 @@ import (
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/identity"
+	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
 type (
@@ -60,6 +61,15 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentStudentNotFoundError, nil)
 	}
 
+	// Belonging to the course requires belonging to the institution that runs
+	// it. Only the student's global profile and the course's school were
+	// checked, so a teacher could enrol somebody who is not a member here —
+	// the row was created, and the student then could not open the
+	// institution at all, because that is decided by school membership.
+	if appErr := studentBelongsToInstitution(ctx, app, input.BearerToken, student.ID); appErr != nil {
+		return nil, appErr
+	}
+
 	if existing, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, courseID, student.ID); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentGetError, err)
 	} else if existing != nil {
@@ -99,4 +109,35 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	created.UserName = identity.FullName(names[created.UserID], created.UserID)
 
 	return &CreateOutput{Data: toEnrollmentData(*created)}, nil
+}
+
+// studentBelongsToInstitution checks the target user against the school the
+// current institution maps to.
+//
+// The membership lives in practiq-be, so this asks there. An unreachable
+// upstream refuses the enrolment rather than assuming membership: creating a
+// row the student cannot use is worse than asking the teacher to retry.
+func studentBelongsToInstitution(ctx context.Context, app *appcontext.Context, bearerToken, studentID string) apperrors.ApplicationError {
+	tenantID := tenantcontext.ID(ctx)
+	if tenantID == "" {
+		return apperrors.NewInternalError(tenantcontext.ErrNoTenant)
+	}
+	tenant, err := app.Repositories.Tenant.Get(ctx, tenantID)
+	if err != nil {
+		return apperrors.NewInternalError(err)
+	}
+	if tenant == nil {
+		return apperrors.NewInternalError(nil)
+	}
+
+	members, err := app.Integrations.PractiqAPI.ListSchoolMembers(ctx, bearerToken, tenant.SchoolID)
+	if err != nil {
+		return apperrors.NewApplicationError(mappings.PractiqLookupError, err)
+	}
+	for _, member := range members {
+		if member.UserID == studentID && member.Active {
+			return nil
+		}
+	}
+	return apperrors.NewApplicationError(mappings.EnrollmentStudentNotInInstitutionError, nil)
 }
