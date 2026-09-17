@@ -14,12 +14,22 @@ import (
 // it, so two simultaneous requests cannot both pass the check.
 var ErrAttemptsExhausted = errors.New("no attempts left for this quiz")
 
-// ErrAttemptClosed means the attempt is already submitted or past its
-// deadline, so it can no longer receive answers.
-var ErrAttemptClosed = errors.New("attempt is no longer open")
+// ErrAttemptAlreadySubmitted means the attempt was handed in already. Kept
+// distinct from expiry: telling a student whose time ran out that they
+// already submitted describes a submission that never happened, and sends
+// them looking for a grade that does not exist.
+var ErrAttemptAlreadySubmitted = errors.New("attempt was already submitted")
+
+// ErrAttemptExpired means the deadline passed before the answers arrived.
+var ErrAttemptExpired = errors.New("attempt deadline has passed")
 
 // ErrNotYourAttempt means the attempt belongs to a different student.
 var ErrNotYourAttempt = errors.New("attempt belongs to another user")
+
+// ErrQuizWindowClosed means the quiz is not open for *starting* right now.
+// It never blocks resuming: an attempt already running carries its own
+// deadline, fixed when it started.
+var ErrQuizWindowClosed = errors.New("quiz is not open for new attempts")
 
 type (
 	// StartParams is what the quiz permits, resolved by the use case before
@@ -34,6 +44,11 @@ type (
 		// deadline: a 60-minute allowance started 10 minutes before the quiz
 		// closes ends when the quiz closes.
 		HardDeadline *time.Time
+		// WindowOpen reports whether the quiz currently admits a *new*
+		// attempt. Resuming ignores it: a student halfway through an exam
+		// whose teacher moves the dates should finish on the deadline their
+		// attempt was given, not be shut out of work already in progress.
+		WindowOpen bool
 	}
 
 	// StartResult reports which attempt the student should be working on and
@@ -119,6 +134,13 @@ func (r *repository) StartOrResume(ctx context.Context, p StartParams) (*StartRe
 		return &StartResult{Attempt: *live, Resumed: true}, nil
 	}
 
+	// Nothing to resume, so this would be a new attempt — which the quiz's
+	// current window governs. Checked here rather than before the
+	// transaction so that a closed window cannot block the resume path.
+	if !p.WindowOpen {
+		return nil, ErrQuizWindowClosed
+	}
+
 	var used, highest int
 	if err = tx.QueryRowContext(ctx, `
 		SELECT COUNT(*), COALESCE(MAX(attempt_number), 0)
@@ -145,6 +167,70 @@ func (r *repository) StartOrResume(ctx context.Context, p StartParams) (*StartRe
 		return nil, err
 	}
 	return &StartResult{Attempt: *created}, nil
+}
+
+// SaveDraft stores answers without grading or closing the attempt.
+//
+// Answers used to exist only in the browser's memory until the moment of
+// submission, so continuing an attempt showed an empty form — the attempt was
+// preserved but everything written into it was gone — and anything that ended
+// the page before submitting (a reload, a closed tab, a flat battery) threw
+// the work away. They are written to the same rows the submission will
+// upsert, so handing in later simply overwrites them.
+//
+// Refuses once the attempt is submitted or expired: a draft saved after the
+// deadline would be work the student was no longer entitled to do.
+func (r *repository) SaveDraft(ctx context.Context, attemptID, userID string, answers []domain.QuizAnswer) error {
+	guard, tenantID, err := attemptGuard(ctx, "$1", 2)
+	if err != nil {
+		return err
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var belongs bool
+	if err = tx.QueryRowContext(ctx, `SELECT `+guard, attemptID, tenantID).Scan(&belongs); err != nil {
+		return err
+	}
+	if !belongs {
+		return ErrQuizNotInTenant
+	}
+
+	locked, err := scanAttempt(tx.QueryRowContext(ctx,
+		`SELECT id, quiz_id, user_id, attempt_number, started_at, expires_at, submitted_at, score, max_score
+		 FROM quiz_attempts WHERE id = $1 FOR UPDATE`, attemptID))
+	if err != nil {
+		return err
+	}
+	if locked == nil {
+		return sql.ErrNoRows
+	}
+	if locked.UserID != userID {
+		return ErrNotYourAttempt
+	}
+	if locked.SubmittedAt != nil {
+		return ErrAttemptAlreadySubmitted
+	}
+	if locked.Expired(time.Now()) {
+		return ErrAttemptExpired
+	}
+
+	for _, a := range answers {
+		// is_correct stays false here; grading happens once, at submission.
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO quiz_answers (attempt_id, question_id, answer_text, is_correct)
+			VALUES ($1, $2, $3, FALSE)
+			ON CONFLICT (attempt_id, question_id)
+			DO UPDATE SET answer_text = EXCLUDED.answer_text
+		`, attemptID, a.QuestionID, a.AnswerText); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // SubmitGraded writes the answers and closes the attempt as one unit.
@@ -194,8 +280,14 @@ func (r *repository) SubmitGraded(ctx context.Context, attemptID, userID string,
 	if locked.UserID != userID {
 		return nil, ErrNotYourAttempt
 	}
-	if !locked.Live(time.Now()) {
-		return nil, ErrAttemptClosed
+	// Both states are decided here, under the lock, and reported apart: the
+	// student needs to know whether their work was recorded or the clock beat
+	// them to it.
+	if locked.SubmittedAt != nil {
+		return nil, ErrAttemptAlreadySubmitted
+	}
+	if locked.Expired(time.Now()) {
+		return nil, ErrAttemptExpired
 	}
 
 	for _, a := range answers {
@@ -216,8 +308,11 @@ func (r *repository) SubmitGraded(ctx context.Context, attemptID, userID string,
 	if err != nil {
 		return nil, err
 	}
+	// The row passed the check above but no longer matches submitted_at IS
+	// NULL, so another writer closed it between the two — the only remaining
+	// explanation, since this transaction holds the lock.
 	if updated == nil {
-		return nil, ErrAttemptClosed
+		return nil, ErrAttemptAlreadySubmitted
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, err

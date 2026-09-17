@@ -99,6 +99,7 @@ type QuizUsecases struct {
 
 type QuizAttemptUsecases struct {
 	Start      ucQuizAttempt.StartUsecase
+	SaveDraft  ucQuizAttempt.SaveDraftUsecase
 	Submit     ucQuizAttempt.SubmitUsecase
 	Get        ucQuizAttempt.GetUsecase
 	ListMine   ucQuizAttempt.ListMineUsecase
@@ -218,6 +219,7 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 		},
 		QuizAttempt: QuizAttemptUsecases{
 			Start:      ucQuizAttempt.NewStartUsecase(contextFactory),
+			SaveDraft:  ucQuizAttempt.NewSaveDraftUsecase(contextFactory),
 			Submit:     ucQuizAttempt.NewSubmitUsecase(contextFactory),
 			Get:        ucQuizAttempt.NewGetUsecase(contextFactory),
 			ListMine:   ucQuizAttempt.NewListMineUsecase(contextFactory),

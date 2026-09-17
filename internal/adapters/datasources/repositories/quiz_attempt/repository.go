@@ -19,6 +19,7 @@ type Repository interface {
 	// which is what made reloading a page burn an attempt and a failed submit
 	// strand answers against an attempt left open.
 	StartOrResume(context.Context, StartParams) (*StartResult, error)
+	SaveDraft(ctx context.Context, attemptID, userID string, answers []domain.QuizAnswer) error
 	SubmitGraded(ctx context.Context, attemptID, userID string, answers []domain.QuizAnswer, score, maxScore int) (*domain.QuizAttempt, error)
 
 	ListAnswers(context.Context, string) ([]domain.QuizAnswer, error)

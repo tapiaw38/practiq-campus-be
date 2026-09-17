@@ -101,6 +101,15 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 			total += inputScore.Score
 			scores = append(scores, domain.RubricScore{SubmissionID: submissionID, CriterionID: criterion.ID, Score: inputScore.Score, Feedback: strings.TrimSpace(inputScore.Feedback)})
 		}
+		// Each criterion is checked against its own maximum, but the sum was
+		// never checked against the assignment's. The two are kept equal when
+		// either is edited — now in both directions — yet an assignment whose
+		// maximum was lowered before that rule existed can still hold a
+		// rubric totalling more, and recording 100 out of 10 would make the
+		// grade meaningless.
+		if total > a.MaxScore {
+			return nil, apperrors.NewBadRequestError("la rúbrica suma más que el puntaje máximo de la tarea: revisala antes de corregir")
+		}
 		if err := app.Repositories.Rubric.Grade(ctx, submissionID, total, input.Feedback, scores); err != nil {
 			return nil, apperrors.NewApplicationError(mappings.SubmissionCreateError, err)
 		}

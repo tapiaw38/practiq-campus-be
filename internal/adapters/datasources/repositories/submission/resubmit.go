@@ -2,9 +2,21 @@ package submission
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"time"
 
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
+
+// ErrSubmissionGraded means the work was graded before this resubmission got
+// to it. Resubmitting clears the grade, so it must not proceed on a stale
+// read of that state.
+var ErrSubmissionGraded = errors.New("submission has already been graded")
+
+// ErrSubmissionGone means the submission disappeared between being read and
+// being locked.
+var ErrSubmissionGone = errors.New("submission no longer exists")
 
 // Resubmit keeps one canonical delivery per student/activity while preserving
 // teacher feedback only until the student explicitly sends a new version.
@@ -33,11 +45,39 @@ func (r *repository) Resubmit(ctx context.Context, id, content string) error {
 		return ErrAssignmentNotInTenant
 	}
 
+	// Whether the work has been graded is re-read here, under a row lock,
+	// because this wipes the grading. The caller checks it too, but that read
+	// and this delete are separate moments: a teacher committing a grade in
+	// between would have it erased by a resubmission that was allowed on the
+	// strength of a stale "not graded yet".
+	var gradedAt *time.Time
+	err = tx.QueryRowContext(ctx,
+		`SELECT graded_at FROM submissions WHERE id = $1 FOR UPDATE`, id).Scan(&gradedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrSubmissionGone
+	}
+	if err != nil {
+		return err
+	}
+	if gradedAt != nil {
+		return ErrSubmissionGraded
+	}
+
 	if _, err = tx.ExecContext(ctx, `DELETE FROM submission_rubric_scores WHERE submission_id = $1`, id); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE submissions SET content = $1, status = 'submitted', score = NULL, feedback = '', graded_at = NULL, submitted_at = NOW() WHERE id = $2`, content, id); err != nil {
+	// The same condition again in the write: if a grade landed between the
+	// lock being taken and this statement — impossible while the lock holds,
+	// but free to assert — the update simply does not match.
+	result, err := tx.ExecContext(ctx, `
+		UPDATE submissions
+		SET content = $1, status = 'submitted', score = NULL, feedback = '', graded_at = NULL, submitted_at = NOW()
+		WHERE id = $2 AND graded_at IS NULL`, content, id)
+	if err != nil {
 		return err
+	}
+	if affected, err := result.RowsAffected(); err == nil && affected == 0 {
+		return ErrSubmissionGraded
 	}
 	return tx.Commit()
 }

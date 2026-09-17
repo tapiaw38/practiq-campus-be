@@ -65,6 +65,23 @@ type QuizAttempt struct {
 	MaxScore    int
 }
 
+// AcceptsNewAttempts reports whether the quiz is open for someone to *start*
+// it at instant now.
+//
+// Deliberately separate from whether an attempt may continue. Applying this
+// to both shut a student out of an exam they were halfway through the moment
+// a teacher moved the dates, even though that attempt carried its own
+// deadline fixed when it began.
+func (q Quiz) AcceptsNewAttempts(now time.Time) bool {
+	if q.ScheduledAt != nil && now.Before(*q.ScheduledAt) {
+		return false
+	}
+	if q.AvailableUntil != nil && now.After(*q.AvailableUntil) {
+		return false
+	}
+	return true
+}
+
 // Expired reports whether the attempt's deadline has passed at instant now.
 func (a QuizAttempt) Expired(now time.Time) bool {
 	return a.ExpiresAt != nil && now.After(*a.ExpiresAt)

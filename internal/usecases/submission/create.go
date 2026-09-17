@@ -2,9 +2,11 @@ package submission
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
+	submissionrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/submission"
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -82,7 +84,13 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID s
 		if a.DueAt != nil && time.Now().After(*a.DueAt) {
 			return nil, apperrors.NewBadRequestError("el plazo de entrega ya venció")
 		}
+		// The repository re-checks this under a row lock and refuses if a
+		// grade arrived in the meantime; the check above stays only to fail
+		// fast in the ordinary case.
 		if err := app.Repositories.Submission.Resubmit(ctx, existing.ID, input.Content); err != nil {
+			if errors.Is(err, submissionrepo.ErrSubmissionGraded) {
+				return nil, apperrors.NewBadRequestError("la entrega ya fue corregida y no puede modificarse")
+			}
 			return nil, apperrors.NewApplicationError(mappings.SubmissionCreateError, err)
 		}
 		updated, err := app.Repositories.Submission.Get(ctx, existing.ID)

@@ -65,6 +65,30 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 	if err != nil || q == nil {
 		return nil, apperrors.NewInternalError(err)
 	}
+
+	// Handing work in is an act of participation, so it asks the same
+	// question starting does: are you still in this course, and still in the
+	// group this quiz is for? Only ownership of the attempt was checked here,
+	// so a student removed from the course mid-exam could still submit and
+	// have a grade recorded against a course they no longer belong to — while
+	// being refused if they tried to start the very same quiz.
+	enrollment, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, q.CourseID, requesterID)
+	if err != nil {
+		return nil, apperrors.NewInternalError(err)
+	}
+	if enrollment == nil {
+		return nil, apperrors.NewApplicationError(mappings.QuizNotEnrolledError, nil)
+	}
+	if q.VisibleGroupID != nil {
+		member, err := app.Repositories.CourseGroup.IsMember(ctx, *q.VisibleGroupID, requesterID)
+		if err != nil {
+			return nil, apperrors.NewInternalError(err)
+		}
+		if !member {
+			return nil, apperrors.NewForbiddenError()
+		}
+	}
+
 	questions, err := app.Repositories.Quiz.ListQuestions(ctx, attempt.QuizID)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
@@ -102,10 +126,13 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 	// grade that did not match the answers stored.
 	updated, err := app.Repositories.QuizAttempt.SubmitGraded(ctx, attemptID, requesterID, quizAnswers, score, maxScore)
 	switch {
-	case errors.Is(err, attemptrepo.ErrAttemptClosed):
-		// Lost the race, or the deadline passed while grading. Either way the
-		// attempt was already settled; say so rather than reporting success.
+	case errors.Is(err, attemptrepo.ErrAttemptAlreadySubmitted):
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptAlreadySubmittedError, nil)
+	case errors.Is(err, attemptrepo.ErrAttemptExpired):
+		// Ran out of time while waiting for the lock or being graded. Nothing
+		// was stored, and saying "already submitted" would have the student
+		// waiting for a grade that is never coming.
+		return nil, apperrors.NewApplicationError(mappings.QuizAttemptExpiredError, nil)
 	case errors.Is(err, attemptrepo.ErrNotYourAttempt):
 		return nil, apperrors.NewForbiddenError()
 	case err != nil:

@@ -153,6 +153,7 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api.POST("/quizzes/:id/attempts", handlerQuizAttempt.NewStartHandler(uc.QuizAttempt.Start))
 	api.GET("/quizzes/:id/attempts/mine", handlerQuizAttempt.NewListMineHandler(uc.QuizAttempt.ListMine))
 	teacherOnly.GET("/quizzes/:id/attempts", handlerQuizAttempt.NewListByQuizHandler(uc.QuizAttempt.ListByQuiz))
+	api.PUT("/attempts/:id/draft", handlerQuizAttempt.NewSaveDraftHandler(uc.QuizAttempt.SaveDraft))
 	api.POST("/attempts/:id/submit", handlerQuizAttempt.NewSubmitHandler(uc.QuizAttempt.Submit))
 	api.GET("/attempts/:id", handlerQuizAttempt.NewGetHandler(uc.QuizAttempt.Get))
 

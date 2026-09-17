@@ -112,3 +112,34 @@ func TestQuizAttemptLifecycle(t *testing.T) {
 		})
 	}
 }
+
+// The rule that separates "may start" from "may continue". Conflating the two
+// locked students out of exams already under way whenever a teacher edited
+// the dates mid-session.
+func TestQuizAcceptsNewAttempts(t *testing.T) {
+	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	past := now.Add(-time.Hour)
+	future := now.Add(time.Hour)
+
+	cases := []struct {
+		name string
+		quiz Quiz
+		want bool
+	}{
+		{"no dates at all is always open", Quiz{}, true},
+		{"opened in the past, no closing date", Quiz{ScheduledAt: &past}, true},
+		{"not opened yet", Quiz{ScheduledAt: &future}, false},
+		{"already closed", Quiz{AvailableUntil: &past}, false},
+		{"inside the window", Quiz{ScheduledAt: &past, AvailableUntil: &future}, true},
+		{"exactly at the opening instant counts as open", Quiz{ScheduledAt: &now}, true},
+		{"exactly at the closing instant is not yet shut", Quiz{AvailableUntil: &now}, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.quiz.AcceptsNewAttempts(now); got != tc.want {
+				t.Fatalf("AcceptsNewAttempts = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

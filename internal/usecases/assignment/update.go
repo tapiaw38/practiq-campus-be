@@ -2,6 +2,7 @@ package assignment
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +52,31 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 	if z := validateUnlockTarget(ctx, a, x.CourseID, id, in.UnlockAfterType, in.UnlockAfterID); z != nil {
 		return nil, z
 	}
+	if in.MaxScore < 1 {
+		return nil, apperrors.NewBadRequestError("el puntaje máximo debe ser mayor a cero")
+	}
+	// A rubric is stored as criteria that must add up to the assignment's
+	// maximum — replace.go enforces that when the rubric changes, but nothing
+	// enforced it when the maximum did. Lowering the maximum from 100 to 10
+	// under a rubric still totalling 100 left grading able to record 100 out
+	// of 10, and silently reinterpreted every grade already given.
+	if in.MaxScore != x.MaxScore {
+		criteria, e := a.Repositories.Rubric.List(ctx, id)
+		if e != nil {
+			return nil, apperrors.NewInternalError(e)
+		}
+		if len(criteria) > 0 {
+			sum := 0
+			for _, c := range criteria {
+				sum += c.MaxScore
+			}
+			if sum != in.MaxScore {
+				return nil, apperrors.NewBadRequestError(
+					"la rúbrica suma " + strconv.Itoa(sum) + " puntos: ajustá la rúbrica antes de cambiar el puntaje máximo")
+			}
+		}
+	}
+
 	weight := in.Weight
 	if weight <= 0 {
 		weight = 100
