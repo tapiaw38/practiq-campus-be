@@ -39,9 +39,14 @@ type AttemptData struct {
 	UserName      string  `json:"user_name,omitempty"`
 	AttemptNumber int     `json:"attempt_number"`
 	StartedAt     string  `json:"started_at"`
-	SubmittedAt   *string `json:"submitted_at"`
-	Score         int     `json:"score"`
-	MaxScore      int     `json:"max_score"`
+	// ExpiresAt is the server's deadline for this attempt; null when untimed.
+	// The client counts down to it instead of to its own start time, so a
+	// clock the student can change does not extend the exam, and a resumed
+	// attempt shows the time actually left rather than a fresh allowance.
+	ExpiresAt   *string `json:"expires_at"`
+	SubmittedAt *string `json:"submitted_at"`
+	Score       int     `json:"score"`
+	MaxScore    int     `json:"max_score"`
 }
 
 func toAttemptData(a domain.QuizAttempt) AttemptData {
@@ -52,6 +57,7 @@ func toAttemptData(a domain.QuizAttempt) AttemptData {
 		UserName:      a.UserName,
 		AttemptNumber: a.AttemptNumber,
 		StartedAt:     a.StartedAt.Format("2006-01-02T15:04:05Z"),
+		ExpiresAt:     formatDateTime(a.ExpiresAt),
 		SubmittedAt:   formatDateTime(a.SubmittedAt),
 		Score:         a.Score,
 		MaxScore:      a.MaxScore,

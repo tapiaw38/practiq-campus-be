@@ -2,9 +2,10 @@ package quiz_attempt
 
 import (
 	"context"
+	"errors"
 	"time"
 
-	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	attemptrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/quiz_attempt"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
@@ -24,6 +25,10 @@ type (
 		Attempt   AttemptData           `json:"attempt"`
 		Questions []StudentQuestionData `json:"questions"`
 		TimeLimit *int                  `json:"time_limit_secs"`
+		// Resumed tells the client it is rejoining an attempt already under
+		// way rather than starting a fresh one, so it can say so instead of
+		// implying the clock just began.
+		Resumed bool `json:"resumed"`
 	}
 )
 
@@ -69,14 +74,6 @@ func (u *startUsecase) Execute(ctx context.Context, requesterID, quizID string) 
 		return nil, apperrors.NewApplicationError(mappings.QuizNotAvailableError, nil)
 	}
 
-	count, err := app.Repositories.QuizAttempt.CountByUser(ctx, quizID, requesterID)
-	if err != nil {
-		return nil, apperrors.NewInternalError(err)
-	}
-	if q.MaxAttempts > 0 && count >= q.MaxAttempts {
-		return nil, apperrors.NewApplicationError(mappings.QuizAttemptsExhaustedError, nil)
-	}
-
 	questions, err := app.Repositories.Quiz.ListQuestions(ctx, quizID)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
@@ -85,23 +82,28 @@ func (u *startUsecase) Execute(ctx context.Context, requesterID, quizID string) 
 		return nil, apperrors.NewBadRequestError("this quiz has no questions yet")
 	}
 
-	id, err := app.Repositories.QuizAttempt.Create(ctx, domain.QuizAttempt{
+	// One atomic step: it hands back the attempt already in progress if there
+	// is one, so reloading the page rejoins the exam instead of spending
+	// another try on it, and it settles the attempt number under a lock so
+	// two clicks cannot collide on it.
+	result, err := app.Repositories.QuizAttempt.StartOrResume(ctx, attemptrepo.StartParams{
 		QuizID:        quizID,
 		UserID:        requesterID,
-		AttemptNumber: count + 1,
+		MaxAttempts:   q.MaxAttempts,
+		TimeLimitSecs: q.TimeLimitSecs,
+		HardDeadline:  q.AvailableUntil,
 	})
+	if errors.Is(err, attemptrepo.ErrAttemptsExhausted) {
+		return nil, apperrors.NewApplicationError(mappings.QuizAttemptsExhaustedError, nil)
+	}
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	created, err := app.Repositories.QuizAttempt.Get(ctx, id)
-	if err != nil || created == nil {
-		return nil, apperrors.NewInternalError(err)
-	}
-
 	return &StartOutput{
-		Attempt:   toAttemptData(*created),
+		Attempt:   toAttemptData(result.Attempt),
 		Questions: toStudentQuestionData(questions),
 		TimeLimit: q.TimeLimitSecs,
+		Resumed:   result.Resumed,
 	}, nil
 }

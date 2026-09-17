@@ -55,9 +55,26 @@ type QuizAttempt struct {
 	UserName      string
 	AttemptNumber int
 	StartedAt     time.Time
-	SubmittedAt   *time.Time
-	Score         int
-	MaxScore      int
+	// ExpiresAt is the server's deadline, fixed when the attempt started.
+	// nil means untimed. Kept on the attempt rather than recomputed from the
+	// quiz so editing the quiz's duration cannot move the deadline of an
+	// attempt already under way.
+	ExpiresAt   *time.Time
+	SubmittedAt *time.Time
+	Score       int
+	MaxScore    int
+}
+
+// Expired reports whether the attempt's deadline has passed at instant now.
+func (a QuizAttempt) Expired(now time.Time) bool {
+	return a.ExpiresAt != nil && now.After(*a.ExpiresAt)
+}
+
+// Live reports whether the attempt is still open for answering: started, not
+// submitted, and not past its deadline. A live attempt is the one a student
+// returning to the page should continue rather than replace.
+func (a QuizAttempt) Live(now time.Time) bool {
+	return a.SubmittedAt == nil && !a.Expired(now)
 }
 
 type QuizAnswer struct {

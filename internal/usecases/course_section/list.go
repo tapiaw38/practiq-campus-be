@@ -6,11 +6,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
+	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
 type (
 	ListUsecase interface {
-		Execute(context.Context, string) (*ListOutput, apperrors.ApplicationError)
+		Execute(context.Context, string, bool, string) (*ListOutput, apperrors.ApplicationError)
 	}
 
 	listUsecase struct {
@@ -26,8 +27,12 @@ func NewListUsecase(contextFactory appcontext.Factory) ListUsecase {
 	return &listUsecase{contextFactory: contextFactory}
 }
 
-func (u *listUsecase) Execute(ctx context.Context, courseID string) (*ListOutput, apperrors.ApplicationError) {
+func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
+
+	if _, appErr := campusaccess.EnsureCanReadCourse(ctx, app, requesterID, isSuperAdmin, courseID); appErr != nil {
+		return nil, appErr
+	}
 
 	sections, err := app.Repositories.CourseSection.ListByCourse(ctx, courseID)
 	if err != nil {

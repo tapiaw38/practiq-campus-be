@@ -2,7 +2,10 @@ package quiz_attempt
 
 import (
 	"context"
+	"errors"
+	"time"
 
+	attemptrepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/quiz_attempt"
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/appcontext"
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
@@ -52,6 +55,11 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 	if attempt.SubmittedAt != nil {
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptAlreadySubmittedError, nil)
 	}
+	// Cheap early exit; the deadline is enforced for real under the row lock
+	// in SubmitGraded, since this read and that write are not the same moment.
+	if attempt.Expired(time.Now()) {
+		return nil, apperrors.NewApplicationError(mappings.QuizAttemptExpiredError, nil)
+	}
 
 	q, err := app.Repositories.Quiz.Get(ctx, attempt.QuizID)
 	if err != nil || q == nil {
@@ -88,18 +96,24 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 		})
 	}
 
-	if err = app.Repositories.QuizAttempt.SaveAnswers(ctx, attemptID, quizAnswers); err != nil {
-		return nil, apperrors.NewInternalError(err)
-	}
-	if err = app.Repositories.QuizAttempt.Submit(ctx, attemptID, score, maxScore); err != nil {
+	// Answers and the closing of the attempt go in together or not at all:
+	// separately, a failure between them left answers saved against an
+	// attempt still marked open, and two submissions could interleave into a
+	// grade that did not match the answers stored.
+	updated, err := app.Repositories.QuizAttempt.SubmitGraded(ctx, attemptID, requesterID, quizAnswers, score, maxScore)
+	switch {
+	case errors.Is(err, attemptrepo.ErrAttemptClosed):
+		// Lost the race, or the deadline passed while grading. Either way the
+		// attempt was already settled; say so rather than reporting success.
+		return nil, apperrors.NewApplicationError(mappings.QuizAttemptAlreadySubmittedError, nil)
+	case errors.Is(err, attemptrepo.ErrNotYourAttempt):
+		return nil, apperrors.NewForbiddenError()
+	case err != nil:
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	updated, err := app.Repositories.QuizAttempt.Get(ctx, attemptID)
-	if err != nil || updated == nil {
-		return nil, apperrors.NewInternalError(err)
-	}
-
+	// Only a submission that actually closed the attempt gets here, so the
+	// teacher is notified once per attempt rather than once per request.
 	if course, err := app.Repositories.Course.Get(ctx, q.CourseID); err == nil && course != nil {
 		_ = app.Repositories.Notification.Create(ctx, domain.Notification{
 			UserID: course.OwnerID,

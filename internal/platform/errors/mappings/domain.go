@@ -178,6 +178,11 @@ var (
 		StatusCode:   http.StatusBadRequest,
 		Message:      "no attempts left for this quiz",
 	}
+	QuizAttemptExpiredError = ErrorDetails{
+		InternalCode: "quiz:attempt-expired",
+		StatusCode:   http.StatusBadRequest,
+		Message:      "the time for this attempt has run out",
+	}
 	QuizNotAvailableError = ErrorDetails{
 		InternalCode: "quiz:not-available",
 		StatusCode:   http.StatusBadRequest,

@@ -15,40 +15,6 @@ func attemptGuard(ctx context.Context, column string, placeholder int) (string, 
 		"at.id = "+column, "c.tenant_id", placeholder)
 }
 
-// SaveAnswers checks the attempt once before writing, rather than guarding
-// each row: every answer in the batch belongs to that one attempt.
-func (r *repository) SaveAnswers(ctx context.Context, attemptID string, answers []domain.QuizAnswer) error {
-	guard, tenantID, err := attemptGuard(ctx, "$1", 2)
-	if err != nil {
-		return err
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	var belongs bool
-	if err = tx.QueryRowContext(ctx, `SELECT `+guard, attemptID, tenantID).Scan(&belongs); err != nil {
-		return err
-	}
-	if !belongs {
-		return ErrQuizNotInTenant
-	}
-
-	for _, a := range answers {
-		if _, err = tx.ExecContext(ctx, `
-			INSERT INTO quiz_answers (attempt_id, question_id, answer_text, is_correct)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (attempt_id, question_id) DO UPDATE SET answer_text=EXCLUDED.answer_text, is_correct=EXCLUDED.is_correct
-		`, attemptID, a.QuestionID, a.AnswerText, a.IsCorrect); err != nil {
-			return err
-		}
-	}
-	return tx.Commit()
-}
-
 func (r *repository) ListAnswers(ctx context.Context, attemptID string) ([]domain.QuizAnswer, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

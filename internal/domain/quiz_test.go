@@ -1,6 +1,9 @@
 package domain
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestGradeQuizAnswer(t *testing.T) {
 	cases := []struct {
@@ -50,6 +53,61 @@ func TestValidateQuizQuestion(t *testing.T) {
 			err := ValidateQuizQuestion(c.q)
 			if (err != nil) != c.wantErr {
 				t.Errorf("ValidateQuizQuestion(%+v) error = %v, wantErr %v", c.q, err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestQuizAttemptLifecycle(t *testing.T) {
+	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	past := now.Add(-time.Minute)
+	future := now.Add(time.Minute)
+	submitted := now.Add(-time.Hour)
+
+	cases := []struct {
+		name        string
+		attempt     QuizAttempt
+		wantExpired bool
+		wantLive    bool
+	}{
+		{
+			// The common case this was missing entirely: the clock ran out
+			// and the attempt must stop accepting answers.
+			name:        "deadline passed",
+			attempt:     QuizAttempt{ExpiresAt: &past},
+			wantExpired: true,
+		},
+		{
+			name:     "deadline still ahead",
+			attempt:  QuizAttempt{ExpiresAt: &future},
+			wantLive: true,
+		},
+		{
+			// An untimed quiz has no deadline, which must not be read as one
+			// that already passed.
+			name:     "no deadline is untimed, not expired",
+			attempt:  QuizAttempt{},
+			wantLive: true,
+		},
+		{
+			name:    "already submitted is not live even before the deadline",
+			attempt: QuizAttempt{ExpiresAt: &future, SubmittedAt: &submitted},
+		},
+		{
+			name:        "exactly at the deadline is not yet over",
+			attempt:     QuizAttempt{ExpiresAt: &now},
+			wantExpired: false,
+			wantLive:    true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.attempt.Expired(now); got != tc.wantExpired {
+				t.Errorf("Expired = %v, want %v", got, tc.wantExpired)
+			}
+			if got := tc.attempt.Live(now); got != tc.wantLive {
+				t.Errorf("Live = %v, want %v", got, tc.wantLive)
 			}
 		})
 	}

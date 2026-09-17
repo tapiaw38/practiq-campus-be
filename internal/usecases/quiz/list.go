@@ -35,18 +35,15 @@ func NewListUsecase(contextFactory appcontext.Factory) ListUsecase {
 func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
+	reader, appErr := campusaccess.EnsureCanReadCourse(ctx, app, requesterID, isSuperAdmin, courseID)
+	if appErr != nil {
+		return nil, appErr
+	}
+	isManager := reader.IsManager
+
 	quizzes, err := app.Repositories.Quiz.ListByCourse(ctx, courseID)
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.QuizListError, err)
-	}
-
-	isManager := isSuperAdmin
-	if !isManager {
-		course, err := app.Repositories.Course.Get(ctx, courseID)
-		if err != nil {
-			return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
-		}
-		isManager = course != nil && campusaccess.CanManageCourse(ctx, course.OwnerID, requesterID, false)
 	}
 
 	out := make([]QuizData, 0, len(quizzes))

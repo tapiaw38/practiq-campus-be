@@ -15,7 +15,7 @@ var ErrQuizNotInTenant = errors.New("quiz does not belong to this tenant")
 // Qualified for the tenant chain: attempts reach an institution through their
 // quiz's course.
 const selectQualifiedAttemptColumns = `
-	at.id, at.quiz_id, at.user_id, at.attempt_number, at.started_at, at.submitted_at, at.score, at.max_score
+	at.id, at.quiz_id, at.user_id, at.attempt_number, at.started_at, at.expires_at, at.submitted_at, at.score, at.max_score
 `
 
 // tenantChain is the path every attempt query walks: attempt → quiz → course.
@@ -33,7 +33,7 @@ func quizGuard(ctx context.Context, column string, placeholder int) (string, any
 
 func scanAttempt(row interface{ Scan(...any) error }) (*domain.QuizAttempt, error) {
 	var a domain.QuizAttempt
-	err := row.Scan(&a.ID, &a.QuizID, &a.UserID, &a.AttemptNumber, &a.StartedAt, &a.SubmittedAt, &a.Score, &a.MaxScore)
+	err := row.Scan(&a.ID, &a.QuizID, &a.UserID, &a.AttemptNumber, &a.StartedAt, &a.ExpiresAt, &a.SubmittedAt, &a.Score, &a.MaxScore)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -41,22 +41,6 @@ func scanAttempt(row interface{ Scan(...any) error }) (*domain.QuizAttempt, erro
 		return nil, err
 	}
 	return &a, nil
-}
-
-func (r *repository) Create(ctx context.Context, a domain.QuizAttempt) (string, error) {
-	guard, tenantID, err := quizGuard(ctx, "$1", 4)
-	if err != nil {
-		return "", err
-	}
-	var id string
-	err = r.db.QueryRowContext(ctx, `
-		INSERT INTO quiz_attempts (quiz_id, user_id, attempt_number)
-		SELECT $1, $2, $3 WHERE `+guard+`
-		RETURNING id`, a.QuizID, a.UserID, a.AttemptNumber, tenantID).Scan(&id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrQuizNotInTenant
-	}
-	return id, err
 }
 
 // Get carries a student's score, so an attempt id from another institution
@@ -126,15 +110,3 @@ func (r *repository) ListMine(ctx context.Context, quizID, userID string) ([]dom
 	return scanAttempts(rows)
 }
 
-func (r *repository) Submit(ctx context.Context, id string, score, maxScore int) error {
-	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
-		"quizzes q JOIN courses c ON c.id = q.course_id",
-		"q.id = quiz_attempts.quiz_id", "c.tenant_id", 4)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.ExecContext(ctx,
-		`UPDATE quiz_attempts SET submitted_at=NOW(), score=$1, max_score=$2 WHERE id=$3 AND `+guard,
-		score, maxScore, id, tenantID)
-	return err
-}
