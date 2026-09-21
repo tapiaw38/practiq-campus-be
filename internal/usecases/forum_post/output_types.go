@@ -10,6 +10,7 @@ type PostData struct {
 	AuthorName string  `json:"author_name"`
 	Body       string  `json:"body"`
 	CreatedAt  string  `json:"created_at"`
+	Deleted    bool    `json:"deleted"`
 }
 
 func toPostData(p domain.ForumPost) PostData {
@@ -21,6 +22,7 @@ func toPostData(p domain.ForumPost) PostData {
 		AuthorName: p.AuthorName,
 		Body:       p.Body,
 		CreatedAt:  p.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		Deleted:    p.DeletedAt != nil,
 	}
 }
 

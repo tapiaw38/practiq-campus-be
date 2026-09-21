@@ -15,13 +15,13 @@ func (r *repository) Get(ctx context.Context, id string) (*domain.ForumPost, err
 		Join("forum_threads", "t", "p.thread_id").
 		Through("courses", "c", "t.course_id").
 		Where("p.id = ?", id).
-		SQL("p.id, p.thread_id, p.parent_post_id, p.author_id, p.body, p.created_at", "forum_posts p")
+		SQL("p.id, p.thread_id, p.parent_post_id, p.author_id, p.body, p.created_at, p.deleted_at", "forum_posts p")
 	if err != nil {
 		return nil, err
 	}
 	var p domain.ForumPost
 	err = r.db.QueryRowContext(ctx, query, args...).
-		Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.Body, &p.CreatedAt)
+		Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.Body, &p.CreatedAt, &p.DeletedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

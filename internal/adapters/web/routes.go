@@ -10,6 +10,7 @@ import (
 	handlerGroup "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/course_group"
 	handlerMaterial "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/course_material"
 	handlerSection "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/course_section"
+	handlerDashboard "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/dashboard"
 	handlerEnrollment "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/enrollment"
 	handlerPost "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/forum_post"
 	handlerThread "github.com/tapiaw38/practiq-campus-be/internal/adapters/web/handlers/forum_thread"
@@ -70,6 +71,7 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api.GET("/me/preferences/:scope", handlerPreference.NewGetHandler(uc.Preference.Get))
 	api.PUT("/me/preferences/:scope", handlerPreference.NewUpdateHandler(uc.Preference.Update))
 	api.GET("/notifications", handlerNotification.List(uc.Notification.Manage))
+	api.GET("/notifications/summary", handlerNotification.Summary(uc.Notification.Manage))
 	api.PUT("/notifications/:id/read", handlerNotification.Read(uc.Notification.Manage))
 
 	// Users — superadmin only: creating (and listing) accounts on behalf of
@@ -84,6 +86,7 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	teacherOnly.POST("/courses/sync-from-practiq", handlerCourse.NewSyncFromPractiqHandler(uc.Course.SyncFromPractiq))
 	teacherOnly.POST("/courses/:id/duplicate", handlerCourse.NewDuplicateHandler(uc.Course.Duplicate))
 	api.GET("/courses", handlerCourse.NewListHandler(uc.Course.List))
+	api.GET("/student/dashboard", handlerDashboard.Student(uc.Dashboard.Student))
 	api.GET("/courses/:id", handlerCourse.NewGetHandler(uc.Course.Get))
 	teacherOnly.PUT("/courses/:id", handlerCourse.NewUpdateHandler(uc.Course.Update))
 	teacherOnly.DELETE("/courses/:id", handlerCourse.NewDeleteHandler(uc.Course.Delete))
@@ -166,6 +169,8 @@ func RegisterRoutes(app *gin.Engine, uc *usecases.Usecases, profiles profileRepo
 	api.GET("/courses/:id/forum-threads", handlerThread.NewListHandler(uc.ForumThread.List))
 	api.POST("/forum-threads/:id/posts", handlerPost.NewCreateHandler(uc.ForumPost.Create))
 	api.GET("/forum-threads/:id/posts", handlerPost.NewListHandler(uc.ForumPost.List))
+	api.PUT("/forum-posts/:id", handlerPost.NewUpdateHandler(uc.ForumPost.Update))
+	api.DELETE("/forum-posts/:id", handlerPost.NewDeleteHandler(uc.ForumPost.Delete))
 
 	// Calendar — teachers create course events and select enrolled attendees.
 	teacherOnly.POST("/calendar/events", handlerCalendar.NewCreateHandler(uc.CalendarEvent.Create))

@@ -9,6 +9,7 @@ type ForumThread struct {
 	ID          string
 	CourseID    string
 	AuthorID    string
+	AuthorName  string
 	Title       string
 	Description string
 	CreatedAt   time.Time
@@ -22,4 +23,5 @@ type ForumPost struct {
 	AuthorName string
 	Body       string
 	CreatedAt  time.Time
+	DeletedAt  *time.Time
 }

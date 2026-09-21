@@ -9,6 +9,7 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/course_group"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/course_material"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/course_section"
+	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/dashboard"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/enrollment"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/forum_post"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/forum_thread"
@@ -26,6 +27,7 @@ type Repositories struct {
 	Profile        profile.Repository
 	Preference     preference.Repository
 	Course         course.Repository
+	Dashboard      dashboard.Repository
 	CourseSection  course_section.Repository
 	CourseGroup    course_group.Repository
 	CourseMaterial course_material.Repository
@@ -51,6 +53,7 @@ func NewFactory(ds *datasources.Datasources) func() *Repositories {
 			Profile:        profile.NewRepository(ds.DB),
 			Preference:     preference.NewRepository(ds.DB),
 			Course:         course.NewRepository(ds.DB),
+			Dashboard:      dashboard.NewRepository(ds.DB),
 			CourseSection:  course_section.NewRepository(ds.DB),
 			CourseGroup:    course_group.NewRepository(ds.DB),
 			CourseMaterial: course_material.NewRepository(ds.DB),

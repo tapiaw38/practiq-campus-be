@@ -31,18 +31,18 @@ func (r *repository) ListByThread(ctx context.Context, threadID string, options 
 		JOIN forum_threads t ON t.id = p.thread_id
 		JOIN courses c ON c.id = t.course_id AND c.tenant_id = $4
 		WHERE p.thread_id = $1 AND p.parent_post_id IS NULL
-		ORDER BY created_at DESC
+		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3
 	), post_tree AS (
-		SELECT p.id, p.thread_id, p.parent_post_id, p.author_id, p.body, p.created_at, r.root_created_at
+		SELECT p.id, p.thread_id, p.parent_post_id, p.author_id, p.body, p.created_at, p.deleted_at, r.root_created_at
 		FROM forum_posts p
 		JOIN root_page r ON r.id = p.id
 		UNION ALL
-		SELECT child.id, child.thread_id, child.parent_post_id, child.author_id, child.body, child.created_at, tree.root_created_at
+		SELECT child.id, child.thread_id, child.parent_post_id, child.author_id, child.body, child.created_at, child.deleted_at, tree.root_created_at
 		FROM forum_posts child
 		JOIN post_tree tree ON child.parent_post_id = tree.id
 	)
-	SELECT id, thread_id, parent_post_id, author_id, body, created_at
+	SELECT id, thread_id, parent_post_id, author_id, body, created_at, deleted_at
 	FROM post_tree
 	ORDER BY root_created_at ASC, created_at ASC`
 	rows, err := r.db.QueryContext(ctx, query, threadID, limit, options.Offset, tenantID)
@@ -54,7 +54,7 @@ func (r *repository) ListByThread(ctx context.Context, threadID string, options 
 	var posts []domain.ForumPost
 	for rows.Next() {
 		var p domain.ForumPost
-		if err := rows.Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.Body, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.ThreadID, &p.ParentID, &p.AuthorID, &p.Body, &p.CreatedAt, &p.DeletedAt); err != nil {
 			return nil, err
 		}
 		posts = append(posts, p)

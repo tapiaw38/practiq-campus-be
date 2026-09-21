@@ -10,6 +10,8 @@ import (
 type Repository interface {
 	Create(context.Context, domain.ForumPost) (string, error)
 	Get(context.Context, string) (*domain.ForumPost, error)
+	Update(context.Context, string, string) error
+	Delete(context.Context, string) error
 	ListByThread(context.Context, string, ListOptions) ([]domain.ForumPost, error)
 	CountRootsByThread(context.Context, string) (int, error)
 }

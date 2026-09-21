@@ -9,8 +9,18 @@ import (
 
 type Usecase interface {
 	List(context.Context, string) ([]domain.Notification, apperrors.ApplicationError)
+	UnreadCount(context.Context, string) (int, apperrors.ApplicationError)
 	Read(context.Context, string, string) apperrors.ApplicationError
 }
+
+func (u *usecase) UnreadCount(c context.Context, id string) (int, apperrors.ApplicationError) {
+	count, err := u.f().Repositories.Notification.CountUnread(c, id)
+	if err != nil {
+		return 0, apperrors.NewInternalError(err)
+	}
+	return count, nil
+}
+
 type usecase struct{ f appcontext.Factory }
 
 func New(f appcontext.Factory) Usecase { return &usecase{f} }

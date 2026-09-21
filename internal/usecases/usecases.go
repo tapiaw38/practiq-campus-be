@@ -8,6 +8,7 @@ import (
 	ucGroup "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_group"
 	ucMaterial "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_material"
 	ucSection "github.com/tapiaw38/practiq-campus-be/internal/usecases/course_section"
+	ucDashboard "github.com/tapiaw38/practiq-campus-be/internal/usecases/dashboard"
 	ucEnrollment "github.com/tapiaw38/practiq-campus-be/internal/usecases/enrollment"
 	ucPost "github.com/tapiaw38/practiq-campus-be/internal/usecases/forum_post"
 	ucThread "github.com/tapiaw38/practiq-campus-be/internal/usecases/forum_thread"
@@ -45,6 +46,7 @@ type CourseUsecases struct {
 	SyncFromPractiq ucCourse.SyncFromPractiqUsecase
 	Duplicate       ucCourse.DuplicateUsecase
 }
+type DashboardUsecases struct{ Student ucDashboard.StudentUsecase }
 
 type EnrollmentUsecases struct {
 	Create       ucEnrollment.CreateUsecase
@@ -115,6 +117,8 @@ type ForumThreadUsecases struct {
 type ForumPostUsecases struct {
 	Create ucPost.CreateUsecase
 	List   ucPost.ListUsecase
+	Update ucPost.UpdateUsecase
+	Delete ucPost.DeleteUsecase
 }
 
 type CalendarEventUsecases struct {
@@ -138,6 +142,7 @@ type Usecases struct {
 	Profile        ProfileUsecases
 	Preference     PreferenceUsecases
 	Course         CourseUsecases
+	Dashboard      DashboardUsecases
 	Enrollment     EnrollmentUsecases
 	CourseSection  CourseSectionUsecases
 	CourseGroup    CourseGroupUsecases
@@ -177,6 +182,7 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			SyncFromPractiq: ucCourse.NewSyncFromPractiqUsecase(contextFactory),
 			Duplicate:       ucCourse.NewDuplicateUsecase(contextFactory),
 		},
+		Dashboard: DashboardUsecases{Student: ucDashboard.NewStudentUsecase(contextFactory)},
 		Enrollment: EnrollmentUsecases{
 			Create:       ucEnrollment.NewCreateUsecase(contextFactory),
 			ListByCourse: ucEnrollment.NewListByCourseUsecase(contextFactory),
@@ -234,6 +240,8 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 		ForumPost: ForumPostUsecases{
 			Create: ucPost.NewCreateUsecase(contextFactory),
 			List:   ucPost.NewListUsecase(contextFactory),
+			Update: ucPost.NewUpdateUsecase(contextFactory),
+			Delete: ucPost.NewDeleteUsecase(contextFactory),
 		},
 		CalendarEvent: CalendarEventUsecases{
 			Create:   ucCalendar.NewCreateUsecase(contextFactory),

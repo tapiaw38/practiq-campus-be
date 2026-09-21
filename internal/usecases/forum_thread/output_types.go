@@ -6,6 +6,7 @@ type ThreadData struct {
 	ID          string `json:"id"`
 	CourseID    string `json:"course_id"`
 	AuthorID    string `json:"author_id"`
+	AuthorName  string `json:"author_name"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"created_at"`
@@ -16,6 +17,7 @@ func toThreadData(t domain.ForumThread) ThreadData {
 		ID:          t.ID,
 		CourseID:    t.CourseID,
 		AuthorID:    t.AuthorID,
+		AuthorName:  t.AuthorName,
 		Title:       t.Title,
 		Description: t.Description,
 		CreatedAt:   t.CreatedAt.Format("2006-01-02T15:04:05Z"),

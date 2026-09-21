@@ -12,6 +12,7 @@ import (
 type Repository interface {
 	Create(context.Context, domain.Notification) error
 	List(context.Context, string) ([]domain.Notification, error)
+	CountUnread(context.Context, string) (int, error)
 	MarkRead(context.Context, string, string) error
 }
 type repository struct{ db *sql.DB }
@@ -55,6 +56,18 @@ func (r *repository) List(c context.Context, u string) (out []domain.Notificatio
 	}
 	e = rows.Err()
 	return
+}
+
+func (r *repository) CountUnread(c context.Context, u string) (int, error) {
+	tenantID := tenantcontext.ID(c)
+	if tenantID == "" {
+		return 0, tenantcontext.ErrNoTenant
+	}
+	var count int
+	err := r.db.QueryRowContext(c,
+		`SELECT COUNT(*) FROM notifications WHERE tenant_id=$1 AND user_id=$2 AND read_at IS NULL`, tenantID, u,
+	).Scan(&count)
+	return count, err
 }
 
 func (r *repository) MarkRead(c context.Context, id, u string) error {

@@ -17,6 +17,16 @@ func List(u uc.Usecase) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"data": x})
 	}
 }
+func Summary(u uc.Usecase) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		count, e := u.UnreadCount(c, middlewares.GetUserID(c))
+		if e != nil {
+			c.JSON(e.StatusCode(), e)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"unread_count": count})
+	}
+}
 func Read(u uc.Usecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if e := u.Read(c, c.Param("id"), middlewares.GetUserID(c)); e != nil {
