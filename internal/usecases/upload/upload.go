@@ -39,11 +39,8 @@ type (
 	}
 
 	FileData struct {
-		// URL is the canonical bucket URL — the value to persist. The bucket
-		// is private, so it is not openable on its own.
 		URL string `json:"url"`
-		// PreviewURL is a short-lived signed URL for showing the file right
-		// after upload. Never stored.
+
 		PreviewURL  string `json:"preview_url,omitempty"`
 		Filename    string `json:"filename"`
 		ContentType string `json:"content_type"`
@@ -66,7 +63,6 @@ func (u *usecase) Execute(ctx context.Context, input Input) (*Output, apperrors.
 		return nil, apperrors.NewApplicationError(mappings.UploadTooLargeError, nil)
 	}
 
-	// Read one byte past the cap so a lying Content-Length is still caught.
 	body, err := io.ReadAll(io.LimitReader(input.Reader, storage.MaxUploadBytes+1))
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.UploadError, err)
@@ -79,10 +75,7 @@ func (u *usecase) Execute(ctx context.Context, input Input) (*Output, apperrors.
 	if folder == "" {
 		folder = "materials"
 	}
-	// Files are stored under the institution that owns them:
-	// campus/{tenant}/{folder}/... Keeping the prefix in the key is what makes
-	// the separation visible in the bucket itself, so it can be reasoned about
-	// — and restricted — outside this process too.
+
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {
 		return nil, apperrors.NewApplicationError(mappings.UploadError, tenantcontext.ErrNoTenant)

@@ -7,8 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ListMine returns the conversations of one institution. A user who belongs to
-// two sees each inbox in its own context, never the two merged.
 func (r *repository) ListMine(ctx context.Context, userID string) ([]ConversationSummary, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

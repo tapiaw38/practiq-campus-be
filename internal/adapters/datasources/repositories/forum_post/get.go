@@ -8,8 +8,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// A post reaches its tenant through two hops: thread, then course. Neither
-// forum table carries a tenant of its own.
 func (r *repository) Get(ctx context.Context, id string) (*domain.ForumPost, error) {
 	query, args, err := tenantcontext.NewQuery(ctx).
 		Join("forum_threads", "t", "p.thread_id").

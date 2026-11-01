@@ -28,10 +28,6 @@ func NewListUsecase(contextFactory appcontext.Factory) ListUsecase {
 	return &listUsecase{contextFactory: contextFactory}
 }
 
-// Execute filters out items restricted to a group the requester isn't in,
-// and flags the rest as locked when their prerequisite isn't met yet — but
-// only for a plain student. The course owner and a superadmin manage every
-// item, so nothing is ever hidden or locked from them.
 func (u *listUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

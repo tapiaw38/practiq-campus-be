@@ -13,9 +13,6 @@ type ProfileData struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-// toProfileData takes name/email pre-resolved by the caller (from
-// auth-api-be, see internal/platform/identity) since domain.Profile no
-// longer carries identity fields.
 func toProfileData(p domain.Profile, fullName, email string) ProfileData {
 	return ProfileData{
 		ID:          p.ID,

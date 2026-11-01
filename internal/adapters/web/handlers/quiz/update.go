@@ -22,7 +22,7 @@ func NewUpdateHandler(uc ucQuiz.UpdateUsecase) gin.HandlerFunc {
 			Description:   input.Description,
 			TimeLimitSecs: input.TimeLimitSecs,
 			MaxAttempts:   input.MaxAttempts,
-			// Absent means "leave as it is"; present-and-null means clear.
+
 			ScheduledAt:       parseDateTime(input.ScheduledAt.Value),
 			ScheduledAtSet:    input.ScheduledAt.Present,
 			AvailableUntil:    parseDateTime(input.AvailableUntil.Value),

@@ -21,10 +21,6 @@ type (
 	}
 
 	CreateOrSyncUserInput struct {
-		// BearerToken is the requesting superadmin's own "Bearer <jwt>"
-		// header, forwarded as-is to auth-api-be/practiq-be — those tokens
-		// are valid on every service since they all share one JWT secret,
-		// so no separate service-to-service credential is needed.
 		BearerToken string
 		Email       string
 		FirstName   string
@@ -37,18 +33,6 @@ func NewProvisionStudentUsecase(contextFactory appcontext.Factory) CreateOrSyncU
 	return &createOrSyncUserUsecase{contextFactory: contextFactory}
 }
 
-// Execute is superadmin-only. Three paths:
-//  1. The email already has a shared identity on auth-api-be, and a
-//     campus_profiles row for that user already exists — return it as-is,
-//     nothing to do.
-//  2. The email already has a shared identity on auth-api-be but no local
-//     row yet — reuse it (no new password, no register call). profile_type
-//     is derived from that account's auth-api-be roles; when it resolves to
-//     "student", it also asks practiq-be for that same user's practiq
-//     profile type to override the guess (student case only, per scope —
-//     teacher-in-practiq reconciliation is a later problem).
-//  3. Brand-new email — requires first_name/last_name/password and goes
-//     through the normal auth-api-be register flow.
 func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyncUserInput) (*SyncOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
@@ -60,11 +44,7 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 	var id, fullName, profileType string
 
 	if authUser != nil {
-		// campus_profiles.id must match the JWT's user_id claim, which
-		// auth-api-be sets to the username (not the UUID id) — self-sync on
-		// login keys profiles the same way, so provisioning has to use the
-		// same identifier or the two paths create separate rows for the
-		// same person.
+
 		id = authUser.Username
 
 		if existing, err := app.Repositories.Profile.Get(ctx, id); err != nil {
@@ -81,11 +61,6 @@ func (u *createOrSyncUserUsecase) Execute(ctx context.Context, input CreateOrSyn
 			}
 		}
 
-		// practiq-be is the source of truth when it knows this person as a
-		// student — a superadmin/teacher account on auth-api-be doesn't mean
-		// they aren't also a plain student in practiq. Teacher-in-practiq
-		// reconciliation is intentionally out of scope for now, so a
-		// practiq "teacher" answer doesn't override anything here.
 		if practiqProfile, err := app.Integrations.PractiqAPI.GetProfile(ctx, input.BearerToken, id); err == nil && practiqProfile != nil {
 			if practiqProfile.ProfileType == "student" {
 				profileType = "student"

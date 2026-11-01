@@ -26,9 +26,6 @@ func NewGetMineUsecase(contextFactory appcontext.Factory) GetMineUsecase {
 	return &getMineUsecase{contextFactory: contextFactory}
 }
 
-// Execute returns nil Data (not an error) when the requester hasn't
-// submitted yet — "no submission" is a normal state for an assignment, not
-// a failure.
 func (u *getMineUsecase) Execute(ctx context.Context, requesterID, assignmentID string) (*GetMineOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

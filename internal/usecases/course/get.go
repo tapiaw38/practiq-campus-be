@@ -26,10 +26,6 @@ func NewGetUsecase(contextFactory appcontext.Factory) GetUsecase {
 	return &getUsecase{contextFactory: contextFactory}
 }
 
-// Execute is intentionally not ownership/enrollment-gated in Phase 1: there
-// is no course catalog or "preview" concept yet, and every caller reaching
-// this either owns the course or was enrolled by its owner. Revisit once a
-// public catalog exists.
 func (u *getUsecase) Execute(ctx context.Context, courseID string) (*GetOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

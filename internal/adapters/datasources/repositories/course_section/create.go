@@ -9,7 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrCourseNotInTenant is returned when the course is another institution's.
 var ErrCourseNotInTenant = errors.New("course does not belong to this tenant")
 
 func (r *repository) Create(ctx context.Context, s domain.CourseSection) (string, error) {

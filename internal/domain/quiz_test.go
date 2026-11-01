@@ -71,8 +71,7 @@ func TestQuizAttemptLifecycle(t *testing.T) {
 		wantLive    bool
 	}{
 		{
-			// The common case this was missing entirely: the clock ran out
-			// and the attempt must stop accepting answers.
+
 			name:        "deadline passed",
 			attempt:     QuizAttempt{ExpiresAt: &past},
 			wantExpired: true,
@@ -83,8 +82,7 @@ func TestQuizAttemptLifecycle(t *testing.T) {
 			wantLive: true,
 		},
 		{
-			// An untimed quiz has no deadline, which must not be read as one
-			// that already passed.
+
 			name:     "no deadline is untimed, not expired",
 			attempt:  QuizAttempt{},
 			wantLive: true,
@@ -113,9 +111,6 @@ func TestQuizAttemptLifecycle(t *testing.T) {
 	}
 }
 
-// The rule that separates "may start" from "may continue". Conflating the two
-// locked students out of exams already under way whenever a teacher edited
-// the dates mid-session.
 func TestQuizAcceptsNewAttempts(t *testing.T) {
 	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
 	past := now.Add(-time.Hour)

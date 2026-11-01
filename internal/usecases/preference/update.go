@@ -42,6 +42,6 @@ func (u *updateUsecase) Execute(ctx context.Context, userID, scope string, input
 }
 
 func validScope(scope string) bool {
-	// Add a scope here deliberately when a new UI needs persisted settings.
+
 	return scope == "teacher.dashboard" || scope == "student.dashboard" || scope == "notifications"
 }

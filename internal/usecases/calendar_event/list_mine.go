@@ -28,13 +28,9 @@ func NewListMineUsecase(contextFactory appcontext.Factory) ListMineUsecase {
 	return &listMineUsecase{contextFactory: contextFactory}
 }
 
-// Execute merges the requester's own manual events with the due dates of
-// every assignment in a course they own or are enrolled in — the latter are
-// assembled here, never stored, so there is nothing to keep in sync.
 func (u *listMineUsecase) Execute(ctx context.Context, requesterID string, isTeacher bool) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
-	// Campus profile type wins over shared auth role (a student may be admin
-	// in another Practiq product).
+
 	if profile, err := app.Repositories.Profile.Get(ctx, requesterID); err == nil && profile != nil {
 		isTeacher = profile.ProfileType == "teacher"
 	}

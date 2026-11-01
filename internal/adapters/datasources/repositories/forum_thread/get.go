@@ -8,7 +8,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Qualified for the tenant join, which brings courses into scope.
 const selectQualifiedThreadColumns = `t.id, t.course_id, t.author_id, t.title, t.description, t.created_at`
 
 func scanThread(row interface{ Scan(...any) error }) (*domain.ForumThread, error) {

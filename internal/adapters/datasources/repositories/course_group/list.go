@@ -10,8 +10,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// The group listing aggregates its members, and joins courses so the tenant
-// constrains which groups exist at all.
 const groupColumns = `g.id, g.course_id, g.name, g.created_at,
 	COALESCE(array_agg(m.user_id) FILTER (WHERE m.user_id IS NOT NULL), '{}')`
 

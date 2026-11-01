@@ -20,23 +20,15 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/config"
 )
 
-// Storage signs its own S3 requests (SigV4 over net/http) rather than pulling
-// in the AWS SDK: the three operations below are all Campus needs, and the
-// signing is ~100 lines against a stable spec.
 type Storage interface {
 	IsConfigured() bool
 	UploadFile(ctx context.Context, folder, userID, filename, contentType string, body []byte) (string, error)
-	// PresignGetURL turns a stored object URL into a temporary URL a browser
-	// can open directly, so the bucket stays private. Reports false when the
-	// value is not one of our objects, and returns it unchanged.
+
 	PresignGetURL(rawURL string, ttl time.Duration) (string, bool)
-	// OwnsFileURL reports whether rawURL is an object uploaded by userID in the
-	// given folder. It is used before persisting references from user input.
+
 	OwnsFileURL(rawURL, folder, userID string) bool
 }
 
-// NoopStorage keeps local development working without AWS credentials —
-// uploading reports the misconfiguration instead of failing obscurely.
 type NoopStorage struct{}
 
 func (NoopStorage) IsConfigured() bool { return false }
@@ -119,10 +111,6 @@ func (s *S3Storage) putObject(ctx context.Context, key, contentType string, body
 	return nil
 }
 
-// PresignGetURL builds a SigV4 query-signed GET URL. The signature carries the
-// authorization, so the browser can fetch the object without credentials and
-// the bucket never needs to be public. Range requests keep working, which is
-// what makes video and PDF streaming viable without proxying bytes through us.
 func (s *S3Storage) PresignGetURL(rawURL string, ttl time.Duration) (string, bool) {
 	key, ok := s.keyFromValue(rawURL)
 	if !ok {
@@ -178,9 +166,6 @@ func (s *S3Storage) PresignGetURL(rawURL string, ttl time.Duration) (string, boo
 	return u.String() + "&X-Amz-Signature=" + signature, true
 }
 
-// OwnsFileURL prevents a teacher from pasting another course's object URL into
-// their own material, which would then be presigned for every reader of that
-// course.
 func (s *S3Storage) OwnsFileURL(rawURL, folder, userID string) bool {
 	key, ok := s.keyFromValue(rawURL)
 	if !ok {

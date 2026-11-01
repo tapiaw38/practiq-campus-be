@@ -11,9 +11,7 @@ import (
 type gradeInput struct {
 	Score    int    `json:"score"`
 	Feedback string `json:"feedback"`
-	// Version of the submission the teacher reviewed. Optional: omitted means
-	// "grade whatever is current", which is how clients behaved before this
-	// existed.
+
 	Version      int `json:"version"`
 	RubricScores []struct {
 		CriterionID string `json:"criterion_id"`

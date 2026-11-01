@@ -8,8 +8,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Qualified for the tenant join, which brings courses into scope. The question
-// count stays a correlated subquery so a quiz with no questions still returns.
 const selectQualifiedQuizColumns = `
 	q.id, q.course_id, q.section_id, q.title, q.description, q.time_limit_secs, q.max_attempts,
 	q.scheduled_at, q.available_until, q.created_at, q.updated_at,

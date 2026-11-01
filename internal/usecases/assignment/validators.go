@@ -8,9 +8,6 @@ import (
 	apperrors "github.com/tapiaw38/practiq-campus-be/internal/platform/errors"
 )
 
-// validateUnlockTarget rejects a prerequisite that doesn't resolve: pointing
-// at nothing, at itself, or at an item from a different course. Enforced
-// here rather than only in the UI, since the API is the only real gate.
 func validateUnlockTarget(ctx context.Context, app *appcontext.Context, courseID, selfID string, unlockType, unlockID *string) apperrors.ApplicationError {
 	if unlockType == nil && unlockID == nil {
 		return nil

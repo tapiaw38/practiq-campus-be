@@ -11,7 +11,7 @@ handler -> usecase -> repository -> domain
 - A handler (Gin) parses the HTTP request, calls a usecase and writes the response. It does not contain business logic.
 - A usecase executes one operation per file (`create.go`, `get.go`, `list.go`, `update.go`, `delete.go`) and depends on `appcontext.Factory` to reach repositories.
 - A repository implements persistence for one domain aggregate. Usecases depend on repository interfaces, not concrete implementations.
-- Domain entities in `internal/domain` are plain structs with no business logic methods.
+- Domain entities in `internal/domain` are structs. They may carry pure predicate methods over their own fields (e.g. a time-based state check) and the small methods needed to satisfy a standard interface such as `error`; they must not query the database, call a usecase or depend on transport types.
 
 ## File layout
 

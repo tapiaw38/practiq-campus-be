@@ -28,10 +28,6 @@ func NewGetUsecase(contextFactory appcontext.Factory) GetUsecase {
 	return &getUsecase{contextFactory: contextFactory}
 }
 
-// Execute lets an attempt's own student, the course owner or a superadmin
-// review it. Correct answers are only ever included once the attempt was
-// submitted — reading an in-progress attempt would hand the answer key to
-// whoever is still taking it.
 func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, attemptID string) (*GetOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
@@ -58,9 +54,6 @@ func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdm
 		}
 	}
 
-	// An attempt whose time ran out is settled here if nobody has settled it
-	// yet, so what follows sees a finished attempt and shows the work instead
-	// of hiding it behind a submitted_at that was never going to arrive.
 	settled, err := finalizeIfExpired(ctx, app, *attempt)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)

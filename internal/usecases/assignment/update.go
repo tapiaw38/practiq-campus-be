@@ -55,17 +55,9 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 	if in.MaxScore < 1 {
 		return nil, apperrors.NewBadRequestError("el puntaje máximo debe ser mayor a cero")
 	}
-	// A rubric is stored as criteria that must add up to the assignment's
-	// maximum — replace.go enforces that when the rubric changes, but nothing
-	// enforced it when the maximum did. Lowering the maximum from 100 to 10
-	// under a rubric still totalling 100 left grading able to record 100 out
-	// of 10, and silently reinterpreted every grade already given.
+
 	if in.MaxScore != x.MaxScore {
-		// A grade is a number out of the maximum in force when it was given.
-		// Moving the maximum afterwards rewrites every one of them at once —
-		// 90/100 silently becomes 90/10 — so work already corrected freezes
-		// it. Regrading deliberately is a decision, not a side effect of
-		// editing a title.
+
 		graded, e := a.Repositories.Submission.ListByAssignment(ctx, id)
 		if e != nil {
 			return nil, apperrors.NewInternalError(e)
@@ -77,11 +69,6 @@ func (u *updateUsecase) Execute(ctx context.Context, uid string, sa bool, id str
 			}
 		}
 
-		// With a rubric present the criteria define the maximum, so it is
-		// changed from the rubric editor — which updates both together —
-		// rather than here. Rejecting without saying that left no legal move
-		// at all: the rubric demanded the old maximum and the maximum
-		// demanded the old rubric total.
 		criteria, e := a.Repositories.Rubric.List(ctx, id)
 		if e != nil {
 			return nil, apperrors.NewInternalError(e)

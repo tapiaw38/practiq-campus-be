@@ -27,9 +27,7 @@ func TestDeadlineFor(t *testing.T) {
 			want:   ptr(now.Add(time.Hour)),
 		},
 		{
-			// A whole hour's allowance cannot outlast the quiz itself: a
-			// student starting ten minutes before it closes gets ten minutes,
-			// not an hour reaching past the close.
+
 			name:   "the quiz's closing time caps a longer allowance",
 			params: StartParams{TimeLimitSecs: secs(3600), HardDeadline: &closesIn10},
 			want:   &closesIn10,
@@ -40,8 +38,7 @@ func TestDeadlineFor(t *testing.T) {
 			want:   ptr(now.Add(time.Hour)),
 		},
 		{
-			// Untimed, but the quiz still closes: submitting after it closed
-			// was possible because only the start checked availability.
+
 			name:   "closing time applies even when there is no time limit",
 			params: StartParams{HardDeadline: &closesIn10},
 			want:   &closesIn10,

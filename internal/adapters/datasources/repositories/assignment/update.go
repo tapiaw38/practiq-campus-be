@@ -7,9 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Update and Delete carry the tenant guard in the same WHERE as the id. A
-// statement naming a row in another institution matches nothing: there is no
-// window in which it is changed and then corrected.
 func (r *repository) Update(ctx context.Context, id string, a domain.Assignment) error {
 	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
 		"courses c", "c.id = assignments.course_id", "c.tenant_id", 11)

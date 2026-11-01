@@ -61,11 +61,6 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		return nil, apperrors.NewApplicationError(mappings.EnrollmentStudentNotFoundError, nil)
 	}
 
-	// Belonging to the course requires belonging to the institution that runs
-	// it. Only the student's global profile and the course's school were
-	// checked, so a teacher could enrol somebody who is not a member here —
-	// the row was created, and the student then could not open the
-	// institution at all, because that is decided by school membership.
 	if appErr := studentBelongsToInstitution(ctx, app, input.BearerToken, student.ID); appErr != nil {
 		return nil, appErr
 	}
@@ -99,9 +94,6 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		return nil, apperrors.NewInternalError(nil)
 	}
 
-	// The create response is inserted directly into the teacher's list by the
-	// frontend, so enrich it here as well as in ListByCourse. Otherwise the new
-	// row briefly shows the username fallback until the page is reloaded.
 	names, err := identity.Names(ctx, app.Integrations.AuthAPI, input.BearerToken, []string{created.UserID})
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.ProfileGetError, err)
@@ -111,12 +103,6 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 	return &CreateOutput{Data: toEnrollmentData(*created)}, nil
 }
 
-// studentBelongsToInstitution checks the target user against the school the
-// current institution maps to.
-//
-// The membership lives in practiq-be, so this asks there. An unreachable
-// upstream refuses the enrolment rather than assuming membership: creating a
-// row the student cannot use is worse than asking the teacher to retry.
 func studentBelongsToInstitution(ctx context.Context, app *appcontext.Context, bearerToken, studentID string) apperrors.ApplicationError {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

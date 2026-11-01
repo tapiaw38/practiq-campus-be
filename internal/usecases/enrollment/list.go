@@ -64,7 +64,6 @@ func (u *listByCourseUsecase) Execute(ctx context.Context, requesterID string, i
 	return &ListOutput{Data: toEnrollmentDataList(enrollments)}, nil
 }
 
-// Execute answers the student dashboard: "which courses am I enrolled in."
 func (u *listMineUsecase) Execute(ctx context.Context, requesterID string) (*ListOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

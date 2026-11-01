@@ -28,13 +28,6 @@ func NewGetUsecase(contextFactory appcontext.Factory) GetUsecase {
 	return &getUsecase{contextFactory: contextFactory}
 }
 
-// Execute returns one quiz, subject to the same rules the listing applies.
-//
-// It used to take an id and nothing else, so a direct GET answered for anyone
-// who knew the id: it skipped the enrolment check, skipped the group
-// restriction that hides a quiz from students outside it, and reported
-// locked=false regardless of an unmet prerequisite. Fetching one item is the
-// same question as fetching many, and has to survive the same filters.
 func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, id string) (*GetOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
@@ -58,8 +51,7 @@ func (u *getUsecase) Execute(ctx context.Context, requesterID string, isSuperAdm
 			if err != nil {
 				return nil, apperrors.NewInternalError(err)
 			}
-			// Restricted to a group this student isn't in: for them it does
-			// not exist, the same answer the listing gives by omitting it.
+
 			if !member {
 				return nil, apperrors.NewApplicationError(mappings.QuizNotFoundError, nil)
 			}

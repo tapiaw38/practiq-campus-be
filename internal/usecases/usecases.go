@@ -20,6 +20,7 @@ import (
 	ucQuizAttempt "github.com/tapiaw38/practiq-campus-be/internal/usecases/quiz_attempt"
 	ucRubric "github.com/tapiaw38/practiq-campus-be/internal/usecases/rubric"
 	ucSubmission "github.com/tapiaw38/practiq-campus-be/internal/usecases/submission"
+	ucTenant "github.com/tapiaw38/practiq-campus-be/internal/usecases/tenant"
 	ucUpload "github.com/tapiaw38/practiq-campus-be/internal/usecases/upload"
 )
 
@@ -138,6 +139,17 @@ type MessageUsecases struct {
 	MarkRead          ucMessage.MarkReadUsecase
 }
 
+type TenantUsecases struct {
+	ListMine            ucTenant.ListMineUsecase
+	List                ucTenant.ListUsecase
+	ListEligibleSchools ucTenant.ListEligibleSchoolsUsecase
+	Activate            ucTenant.ActivateUsecase
+	SetStatus           ucTenant.SetStatusUsecase
+	ListMembers         ucTenant.ListMembersUsecase
+	AddMember           ucTenant.AddMemberUsecase
+	RemoveMember        ucTenant.RemoveMemberUsecase
+}
+
 type Usecases struct {
 	Profile        ProfileUsecases
 	Preference     PreferenceUsecases
@@ -158,6 +170,7 @@ type Usecases struct {
 	ForumPost      ForumPostUsecases
 	CalendarEvent  CalendarEventUsecases
 	Message        MessageUsecases
+	Tenant         TenantUsecases
 }
 
 func NewUsecases(contextFactory appcontext.Factory) *Usecases {
@@ -257,6 +270,16 @@ func NewUsecases(contextFactory appcontext.Factory) *Usecases {
 			Reply:             ucMessage.NewReplyUsecase(contextFactory),
 			SearchRecipients:  ucMessage.NewSearchRecipientsUsecase(contextFactory),
 			MarkRead:          ucMessage.NewMarkReadUsecase(contextFactory),
+		},
+		Tenant: TenantUsecases{
+			ListMine:            ucTenant.NewListMineUsecase(contextFactory),
+			List:                ucTenant.NewListUsecase(contextFactory),
+			ListEligibleSchools: ucTenant.NewListEligibleSchoolsUsecase(contextFactory),
+			Activate:            ucTenant.NewActivateUsecase(contextFactory),
+			SetStatus:           ucTenant.NewSetStatusUsecase(contextFactory),
+			ListMembers:         ucTenant.NewListMembersUsecase(contextFactory),
+			AddMember:           ucTenant.NewAddMemberUsecase(contextFactory),
+			RemoveMember:        ucTenant.NewRemoveMemberUsecase(contextFactory),
 		},
 	}
 }

@@ -19,8 +19,6 @@ type repository struct{ db *sql.DB }
 
 func NewRepository(db *sql.DB) Repository { return &repository{db} }
 
-// Notifications are raised inside the institution whose activity caused them,
-// so a person in two of them sees each inbox in its own context.
 func (r *repository) Create(c context.Context, n domain.Notification) error {
 	tenantID := tenantcontext.ID(c)
 	if tenantID == "" {

@@ -9,12 +9,8 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrNotInTenant is returned when the course or group belongs to another
-// institution.
 var ErrNotInTenant = errors.New("resource does not belong to this tenant")
 
-// groupGuard constrains a write to a group of the tenant, walking group →
-// course.
 func groupGuard(ctx context.Context, column string, placeholder int) (string, any, error) {
 	return tenantcontext.ExistsIn(ctx,
 		"course_groups g JOIN courses c ON c.id = g.course_id", "g.id = "+column, "c.tenant_id", placeholder)

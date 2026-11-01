@@ -14,7 +14,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Opt-in real PostgreSQL tests; each run owns a separate schema.
 func TestPostgresLifecycle(t *testing.T) {
 	dsn := os.Getenv("CAMPUS_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -67,10 +66,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	t.Run("concurrent starts resume one attempt", func(t *testing.T) {
 		var wg sync.WaitGroup
 		ids := make(chan string, 8)
-		// A gate so the requests genuinely overlap. Without it the first
-		// goroutine tends to commit before the others have read anything, and
-		// they resume rather than collide — which makes the test pass even
-		// with the serialisation removed.
+
 		gate := make(chan struct{})
 		var ready sync.WaitGroup
 		for i := 0; i < 8; i++ {
@@ -103,11 +99,7 @@ func TestPostgresLifecycle(t *testing.T) {
 		}
 	})
 	t.Run("start serialises on the advisory lock", func(t *testing.T) {
-		// Racing eight goroutines does not actually prove the serialisation:
-		// on a local database the first transaction commits before the others
-		// have read anything, so they resume and the test passes even with the
-		// lock removed. This asserts the lock is taken instead of hoping the
-		// window opens — hold it from outside and require the start to wait.
+
 		const probe = "lock-probe"
 		holder, err := db.Begin()
 		if err != nil {
@@ -158,8 +150,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	}
 	id := result.Attempt.ID
 	t.Run("invalid batch is atomic", func(t *testing.T) {
-		// A question that exists but belongs to a different quiz: the foreign
-		// key is satisfied, so only the ownership check can reject it.
+
 		err := r.SaveDraft(ctx, id, "student", []domain.QuizAnswer{{QuestionID: questionID, AnswerText: "true"}, {QuestionID: otherQuizQuestionID}})
 		if err != ErrForeignQuestion {
 			t.Fatalf("got %v", err)
@@ -190,7 +181,7 @@ func TestPostgresLifecycle(t *testing.T) {
 			}
 			done <- e
 		}()
-		// Wait until the finalizer actually blocks on the writer's lock.
+
 		deadline := time.Now().Add(5 * time.Second)
 		blocked := false
 		for time.Now().Before(deadline) {

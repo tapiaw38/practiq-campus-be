@@ -7,11 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Grade writes marks onto a student's work, so the submission is confirmed to
-// belong to this institution before anything is written.
-// expectedVersion is the submission version the teacher graded; if the
-// student resubmitted meanwhile the update matches nothing and the caller is
-// told the work changed rather than marking content nobody reviewed.
 func (r *repository) Grade(c context.Context, s string, total int, feedback string, in []domain.RubricScore, expectedVersion int) (e error) {
 	guard, tenantID, e := tenantcontext.ExistsIn(c,
 		"submissions sub JOIN assignments asg ON asg.id = sub.assignment_id JOIN courses co ON co.id = asg.course_id",

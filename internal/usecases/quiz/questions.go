@@ -9,7 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 )
 
-// QuestionInput is what the teacher sends when replacing a quiz's questions.
 type QuestionInput struct {
 	Type          string
 	Statement     string
@@ -19,7 +18,6 @@ type QuestionInput struct {
 }
 
 type QuestionsUsecase interface {
-	// List is the teacher-facing view, correct answers included.
 	List(ctx context.Context, quizID, requesterID string, isSuperAdmin bool) ([]QuestionData, apperrors.ApplicationError)
 	Replace(ctx context.Context, quizID, requesterID string, isSuperAdmin bool, in []QuestionInput) apperrors.ApplicationError
 }
@@ -83,9 +81,6 @@ func (u *questionsUsecase) Replace(ctx context.Context, quizID, requesterID stri
 
 	app := u.contextFactory()
 
-	// Once a student has attempted the quiz, its questions are locked: editing
-	// them would retroactively change what an already-graded attempt was
-	// judged against.
 	attempts, err := app.Repositories.QuizAttempt.ListByQuiz(ctx, quizID)
 	if err != nil {
 		return apperrors.NewInternalError(err)

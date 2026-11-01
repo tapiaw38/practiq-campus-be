@@ -9,11 +9,8 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrAssignmentNotInTenant is returned when the assignment belongs to another
-// institution's course.
 var ErrAssignmentNotInTenant = errors.New("assignment does not belong to this tenant")
 
-// assignmentGuard constrains a write to an assignment of the tenant in context.
 func assignmentGuard(ctx context.Context, column string, placeholder int) (string, any, error) {
 	return tenantcontext.ExistsIn(ctx,
 		"assignments a JOIN courses c ON c.id = a.course_id", "a.id = "+column, "c.tenant_id", placeholder)
