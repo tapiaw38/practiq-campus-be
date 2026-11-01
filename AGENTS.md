@@ -28,6 +28,15 @@ internal/adapters/web/handlers/<domain>/
 - Register new usecases and repositories in `internal/usecases/usecases.go` and `internal/adapters/datasources/repositories/repositories.go`.
 - Wrap persistence and validation errors with `apperrors.ApplicationError` and the matching entry in `internal/platform/errors/mappings`.
 
+## Route registration
+
+`RegisterRoutes` builds three groups off `/api`, and the order of the statements is load-bearing because Gin copies the parent's handler chain when a group is created, not when a route is added:
+
+- `superAdminOnly` is created before `api.Use(middlewares.RequireTenant(...))` on purpose. Platform administration — listing institutions, enabling one, changing its status — is how a tenant comes to exist, so those routes have to stay reachable with no tenant selected.
+- `teacherOnly` must be created *after* that `api.Use(...)` line. Moving it up would drop `RequireTenant` from every teacher route, so a global auth role would decide access before Campus knew which institution was selected.
+- Routes whose access depends on enrollment rather than role (submissions, quiz attempts, forum posts, messaging) hang off the plain `api` group and check access inside their usecase.
+- Self-enrolment has no route by design: an institution decides who attends what, so enrolment comes from the course's teacher or its admin.
+
 ## Platform boundaries
 
 - Put cross-cutting infrastructure in `internal/platform/<area>` (`appcontext`, `auth`, `config`, `database`, `errors`, `identity`, `revocation`, `storage`, `tenantcontext`, `unlock`).
