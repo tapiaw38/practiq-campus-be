@@ -41,12 +41,14 @@ func (u *listUsecase) Execute(ctx context.Context, input ListInput) (*ListOutput
 	result := make([]TenantAdminData, 0, len(tenants))
 	for _, value := range tenants {
 		school := index[value.SchoolID]
+		name := school.Name
+		qualifies := eligible(school)
 		result = append(result, TenantAdminData{
 			ID:       value.ID,
 			SchoolID: value.SchoolID,
-			Name:     school.Name,
+			Name:     &name,
 			Status:   value.Status,
-			Eligible: eligible(school),
+			Eligible: &qualifies,
 		})
 	}
 	return &ListOutput{Data: result}, nil

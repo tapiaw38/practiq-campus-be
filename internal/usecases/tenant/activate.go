@@ -45,5 +45,7 @@ func (u *activateUsecase) Execute(ctx context.Context, input ActivateInput) (*Ac
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.TenantActivateError, err)
 	}
-	return &ActivateOutput{Data: TenantAdminData{ID: value.ID, SchoolID: value.SchoolID, Name: school.Name, Status: value.Status, Eligible: true}}, nil
+	name := school.Name
+	qualifies := true
+	return &ActivateOutput{Data: TenantAdminData{ID: value.ID, SchoolID: value.SchoolID, Name: &name, Status: value.Status, Eligible: &qualifies}}, nil
 }

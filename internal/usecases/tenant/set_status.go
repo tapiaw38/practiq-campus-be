@@ -38,10 +38,10 @@ func (u *setStatusUsecase) Execute(ctx context.Context, input SetStatusInput) (*
 		return nil, apperrors.NewApplicationError(mappings.TenantNotFoundError, nil)
 	}
 
+	schools, schoolsErr := app.Integrations.PractiqAPI.ListAllSchools(ctx, input.BearerToken)
 	if input.Status == domain.TenantStatusActive {
-		schools, err := app.Integrations.PractiqAPI.ListAllSchools(ctx, input.BearerToken)
-		if err != nil {
-			return nil, apperrors.NewApplicationError(mappings.TenantScopeUnavailableError, err)
+		if schoolsErr != nil {
+			return nil, apperrors.NewApplicationError(mappings.TenantScopeUnavailableError, schoolsErr)
 		}
 		school, found := schoolsByID(schools)[existing.SchoolID]
 		if !found || !eligible(school) {
@@ -53,5 +53,15 @@ func (u *setStatusUsecase) Execute(ctx context.Context, input SetStatusInput) (*
 	if err != nil {
 		return nil, apperrors.NewApplicationError(mappings.TenantStatusUpdateError, err)
 	}
-	return &SetStatusOutput{Data: TenantAdminData{ID: value.ID, SchoolID: value.SchoolID, Status: value.Status}}, nil
+
+	data := TenantAdminData{ID: value.ID, SchoolID: value.SchoolID, Status: value.Status}
+	if schoolsErr == nil {
+		if school, found := schoolsByID(schools)[existing.SchoolID]; found {
+			name := school.Name
+			qualifies := eligible(school)
+			data.Name = &name
+			data.Eligible = &qualifies
+		}
+	}
+	return &SetStatusOutput{Data: data}, nil
 }

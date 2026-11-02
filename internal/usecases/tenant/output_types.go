@@ -10,11 +10,11 @@ type TenantData struct {
 }
 
 type TenantAdminData struct {
-	ID       string `json:"id"`
-	SchoolID string `json:"school_id"`
-	Name     string `json:"name"`
-	Status   string `json:"status"`
-	Eligible bool   `json:"eligible"`
+	ID       string  `json:"id"`
+	SchoolID string  `json:"school_id"`
+	Name     *string `json:"name,omitempty"`
+	Status   string  `json:"status"`
+	Eligible *bool   `json:"eligible,omitempty"`
 }
 
 type EligibleSchoolData struct {
