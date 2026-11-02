@@ -9,12 +9,8 @@ import (
 	"strings"
 )
 
-// MaxUploadBytes caps a single upload. Scanned PDFs and short lecture videos
-// are the large cases; anything past this is likely a mistake.
-const MaxUploadBytes = 50 << 20 // 50 MiB
+const MaxUploadBytes = 50 << 20
 
-// FileKind groups accepted content types into the buckets the product talks
-// about, so the UI can say "documento" instead of listing MIME types.
 type FileKind string
 
 const (
@@ -27,8 +23,6 @@ const (
 
 var ErrUnsupportedFileType = errors.New("unsupported file type")
 
-// acceptedTypes is a whitelist: an unknown content type is rejected rather
-// than stored, so the bucket never receives arbitrary binaries.
 var acceptedTypes = map[string]struct {
 	kind FileKind
 	ext  string
@@ -60,8 +54,6 @@ var acceptedTypes = map[string]struct {
 	"application/vnd.oasis.opendocument.text": {FileKindDocument, ".odt"},
 }
 
-// ClassifyContentType reports the bucket a content type belongs to. Parameters
-// such as "audio/webm;codecs=opus" are stripped before matching.
 func ClassifyContentType(contentType string) (FileKind, string, error) {
 	base := strings.ToLower(strings.TrimSpace(contentType))
 	if index := strings.Index(base, ";"); index >= 0 {
@@ -74,13 +66,6 @@ func ClassifyContentType(contentType string) (FileKind, string, error) {
 	return entry.kind, entry.ext, nil
 }
 
-// ResolveContentType returns the content type an upload will actually be
-// stored with: the declared one when the whitelist accepts it *and* the bytes
-// do not say otherwise, else the sniffed one.
-//
-// http.DetectContentType only recognizes some formats; when it cannot tell
-// (application/octet-stream and friends) the declaration stands, since
-// rejecting there would break every format Go cannot sniff.
 func ResolveContentType(contentType string, body []byte) (string, FileKind, string, error) {
 	if kind, ext, err := ClassifyContentType(contentType); err == nil {
 		if sniffedKind, _, sniffErr := ClassifyContentType(http.DetectContentType(body)); sniffErr == nil && conflictingKinds(kind, sniffedKind) {
@@ -88,8 +73,7 @@ func ResolveContentType(contentType string, body []byte) (string, FileKind, stri
 		}
 		return contentType, kind, ext, nil
 	}
-	// Some browsers send an empty or generic type; sniff the bytes before
-	// rejecting the upload.
+
 	sniffed := http.DetectContentType(body)
 	kind, ext, err := ClassifyContentType(sniffed)
 	if err != nil {
@@ -98,12 +82,6 @@ func ResolveContentType(contentType string, body []byte) (string, FileKind, stri
 	return sniffed, kind, ext, nil
 }
 
-// conflictingKinds reports a declaration the bytes contradict.
-//
-// Audio and video are never treated as a conflict: WebM and Ogg are the same
-// container either way, so an audio file is sniffed as video/webm and
-// rejecting it would break legitimate uploads. Everything else that Go can
-// identify has to agree.
 func conflictingKinds(declared, sniffed FileKind) bool {
 	if declared == sniffed {
 		return false
@@ -114,9 +92,6 @@ func conflictingKinds(declared, sniffed FileKind) bool {
 	return !(mediaContainer(declared) && mediaContainer(sniffed))
 }
 
-// UploadFile stores a file and returns its canonical bucket URL. contentType is
-// trusted only after passing the whitelist; when the client sends nothing
-// usable the bytes are sniffed instead.
 func (s *S3Storage) UploadFile(ctx context.Context, folder, userID, filename, contentType string, body []byte) (string, error) {
 	if len(body) == 0 {
 		return "", errors.New("empty file")
@@ -130,8 +105,6 @@ func (s *S3Storage) UploadFile(ctx context.Context, folder, userID, filename, co
 		return "", err
 	}
 
-	// The extension always comes from the verified content type, never from the
-	// client-supplied filename — a hostile name cannot traverse or collide.
 	key := buildFileKey(folder, userID, ext)
 	if err := s.putObject(ctx, key, contentType, body); err != nil {
 		return "", err

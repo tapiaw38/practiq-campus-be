@@ -16,9 +16,6 @@ type Repository interface {
 	Delete(context.Context, string) error
 }
 
-// ListFilter narrows a course listing. OwnerID lists a teacher's own
-// courses; EnrolledUserID lists courses a given user is enrolled in
-// (joins enrollments); neither set lists every published course.
 type ListFilter struct {
 	TenantID       string
 	OwnerID        string

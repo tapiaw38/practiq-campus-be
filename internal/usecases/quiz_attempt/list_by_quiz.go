@@ -49,9 +49,6 @@ func (u *listByQuizUsecase) Execute(ctx context.Context, requesterID string, isS
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	// Attempts whose time ran out are closed here, so this screen reports
-	// finished work with a grade rather than a list stuck on "in progress"
-	// hiding answers the student did write.
 	attempts, err = finalizeExpiredIn(ctx, app, attempts)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)

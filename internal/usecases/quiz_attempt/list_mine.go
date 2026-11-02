@@ -31,9 +31,7 @@ func (u *listMineUsecase) Execute(ctx context.Context, requesterID, quizID strin
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
 	}
-	// Settles anything the clock ended, so the student sees the grade for
-	// what they saved rather than an attempt that looks perpetually open and
-	// blocks the count of tries left.
+
 	attempts, err = finalizeExpiredIn(ctx, app, attempts)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)

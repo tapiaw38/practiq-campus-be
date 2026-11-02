@@ -36,9 +36,6 @@ func NewSubmitUsecase(contextFactory appcontext.Factory) SubmitUsecase {
 	return &submitUsecase{contextFactory: contextFactory}
 }
 
-// Execute grades the attempt itself: every question type supported here is
-// decided by exact comparison (domain.GradeQuizAnswer), never by an external
-// call, so a result is available the instant the student submits.
 func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID string, answers []AnswerInput) (*SubmitOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
@@ -55,8 +52,7 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 	if attempt.SubmittedAt != nil {
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptAlreadySubmittedError, nil)
 	}
-	// Cheap early exit; the deadline is enforced for real under the row lock
-	// in SubmitGraded, since this read and that write are not the same moment.
+
 	if attempt.Expired(time.Now()) {
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptExpiredError, nil)
 	}
@@ -66,12 +62,6 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	// Handing work in is an act of participation, so it asks the same
-	// question starting does: are you still in this course, and still in the
-	// group this quiz is for? Only ownership of the attempt was checked here,
-	// so a student removed from the course mid-exam could still submit and
-	// have a grade recorded against a course they no longer belong to — while
-	// being refused if they tried to start the very same quiz.
 	enrollment, err := app.Repositories.Enrollment.GetByCourseAndUser(ctx, q.CourseID, requesterID)
 	if err != nil {
 		return nil, apperrors.NewInternalError(err)
@@ -120,18 +110,12 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 		})
 	}
 
-	// Answers and the closing of the attempt go in together or not at all:
-	// separately, a failure between them left answers saved against an
-	// attempt still marked open, and two submissions could interleave into a
-	// grade that did not match the answers stored.
 	updated, err := app.Repositories.QuizAttempt.SubmitGraded(ctx, attemptID, requesterID, quizAnswers, score, maxScore)
 	switch {
 	case errors.Is(err, attemptrepo.ErrAttemptAlreadySubmitted):
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptAlreadySubmittedError, nil)
 	case errors.Is(err, attemptrepo.ErrAttemptExpired):
-		// Ran out of time while waiting for the lock or being graded. Nothing
-		// was stored, and saying "already submitted" would have the student
-		// waiting for a grade that is never coming.
+
 		return nil, apperrors.NewApplicationError(mappings.QuizAttemptExpiredError, nil)
 	case errors.Is(err, attemptrepo.ErrNotYourAttempt):
 		return nil, apperrors.NewForbiddenError()
@@ -139,8 +123,6 @@ func (u *submitUsecase) Execute(ctx context.Context, requesterID, attemptID stri
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	// Only a submission that actually closed the attempt gets here, so the
-	// teacher is notified once per attempt rather than once per request.
 	if course, err := app.Repositories.Course.Get(ctx, q.CourseID); err == nil && course != nil {
 		_ = app.Repositories.Notification.Create(ctx, domain.Notification{
 			UserID: course.OwnerID,

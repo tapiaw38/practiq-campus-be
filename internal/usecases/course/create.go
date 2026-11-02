@@ -58,9 +58,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, input C
 	if existing, err := app.Repositories.Course.GetBySlug(ctx, "", slug); err != nil {
 		return nil, apperrors.NewApplicationError(mappings.CourseGetError, err)
 	} else if existing != nil {
-		// Two courses with the same title is common ("Matemática"); the slug
-		// is disambiguated with a short suffix rather than rejecting the
-		// request, which would make the teacher rename their own course.
+
 		slug = slug + "-" + randomSuffix()
 	}
 
@@ -103,8 +101,6 @@ func normalizeLabels(labels []string) []string {
 	return result
 }
 
-// randomSuffix disambiguates a slug collision. Time-based, not random: two
-// requests never collide, and it needs no extra dependency.
 func randomSuffix() string {
 	return strconv.FormatInt(time.Now().UnixNano()%1_000_000, 36)
 }

@@ -26,11 +26,9 @@ type Quiz struct {
 	AvailableUntil *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	// QuestionCount is populated only by ListByCourse, for the card the
-	// teacher sees before opening a quiz — it is never a stored column.
+
 	QuestionCount int
-	// Weight, VisibleGroupID, UnlockAfterType/UnlockAfterID mirror
-	// Assignment's fields of the same name — see there for what each means.
+
 	Weight          int
 	VisibleGroupID  *string
 	UnlockAfterType *string
@@ -55,23 +53,13 @@ type QuizAttempt struct {
 	UserName      string
 	AttemptNumber int
 	StartedAt     time.Time
-	// ExpiresAt is the server's deadline, fixed when the attempt started.
-	// nil means untimed. Kept on the attempt rather than recomputed from the
-	// quiz so editing the quiz's duration cannot move the deadline of an
-	// attempt already under way.
+
 	ExpiresAt   *time.Time
 	SubmittedAt *time.Time
 	Score       int
 	MaxScore    int
 }
 
-// AcceptsNewAttempts reports whether the quiz is open for someone to *start*
-// it at instant now.
-//
-// Deliberately separate from whether an attempt may continue. Applying this
-// to both shut a student out of an exam they were halfway through the moment
-// a teacher moved the dates, even though that attempt carried its own
-// deadline fixed when it began.
 func (q Quiz) AcceptsNewAttempts(now time.Time) bool {
 	if q.ScheduledAt != nil && now.Before(*q.ScheduledAt) {
 		return false
@@ -82,14 +70,10 @@ func (q Quiz) AcceptsNewAttempts(now time.Time) bool {
 	return true
 }
 
-// Expired reports whether the attempt's deadline has passed at instant now.
 func (a QuizAttempt) Expired(now time.Time) bool {
 	return a.ExpiresAt != nil && now.After(*a.ExpiresAt)
 }
 
-// Live reports whether the attempt is still open for answering: started, not
-// submitted, and not past its deadline. A live attempt is the one a student
-// returning to the page should continue rather than replace.
 func (a QuizAttempt) Live(now time.Time) bool {
 	return a.SubmittedAt == nil && !a.Expired(now)
 }
@@ -102,10 +86,8 @@ type QuizAnswer struct {
 	IsCorrect  bool
 }
 
-// blankMarkerPattern matches {{n}} placeholders in a fill_blanks statement.
 var blankMarkerPattern = regexp.MustCompile(`\{\{\s*(\d+)\s*\}\}`)
 
-// BlankIDsInStatement returns the blank numbers declared in the statement.
 func BlankIDsInStatement(statement string) []int {
 	matches := blankMarkerPattern.FindAllStringSubmatch(statement, -1)
 	ids := make([]int, 0, len(matches))
@@ -121,12 +103,10 @@ func BlankIDsInStatement(statement string) []int {
 	return ids
 }
 
-// NormalizeBlankAnswer collapses whitespace so spacing never decides a grade.
 func NormalizeBlankAnswer(value string) string {
 	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
 }
 
-// ParseBlanksAnswer reads the JSON answer format {"1":"a","2":"b"}.
 func ParseBlanksAnswer(value string) map[string]string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -147,8 +127,6 @@ func ParseBlanksAnswer(value string) map[string]string {
 	return parsed
 }
 
-// BlanksAnswersMatch reports whether the student placed every blank as
-// expected. A missing, extra or malformed blank fails.
 func BlanksAnswersMatch(student, expected string) bool {
 	got := ParseBlanksAnswer(student)
 	want := ParseBlanksAnswer(expected)
@@ -163,9 +141,6 @@ func BlanksAnswersMatch(student, expected string) bool {
 	return true
 }
 
-// ValidateQuizQuestion rejects a question the teacher could not intend, before
-// it ever reaches a student. Enforced here (not just in the UI) since the API
-// is the only gate.
 func ValidateQuizQuestion(q QuizQuestion) error {
 	if strings.TrimSpace(q.Statement) == "" {
 		return errInvalidQuestion("statement is required")
@@ -214,9 +189,6 @@ func ValidateQuizQuestion(q QuizQuestion) error {
 	return nil
 }
 
-// GradeQuizAnswer is the single source of truth for auto-grading: every
-// supported question type is decided by exact comparison, deliberately never
-// by AI, so a quiz result is reproducible and never waits on an external call.
 func GradeQuizAnswer(q QuizQuestion, answerText string) bool {
 	switch q.Type {
 	case QuizQuestionFillBlanks:

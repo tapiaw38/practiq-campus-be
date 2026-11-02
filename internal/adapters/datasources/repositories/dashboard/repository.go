@@ -24,9 +24,6 @@ type repository struct{ db *sql.DB }
 
 func NewRepository(db *sql.DB) Repository { return &repository{db: db} }
 
-// StudentCourses aggregates assignments and quizzes in one tenant-scoped query.
-// Keeping this server-side prevents the dashboard from issuing one request per
-// course and per activity merely to draw its course cards.
 func (r *repository) StudentCourses(ctx context.Context, userID string) ([]CourseSummary, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

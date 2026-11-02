@@ -8,9 +8,6 @@ import (
 	ucQuizAttempt "github.com/tapiaw38/practiq-campus-be/internal/usecases/quiz_attempt"
 )
 
-// NewSaveDraftHandler stores work in progress. It shares submitInput: a draft
-// and a submission carry the same answers, they differ only in whether the
-// attempt is being closed.
 func NewSaveDraftHandler(uc ucQuizAttempt.SaveDraftUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input submitInput

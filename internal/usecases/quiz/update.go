@@ -27,10 +27,7 @@ type (
 		TimeLimitSecs *int
 		MaxAttempts   int
 		ScheduledAt   *time.Time
-		// ScheduledAtSet reports whether the request mentioned the field at
-		// all. Without it, an update that simply did not carry the dates was
-		// indistinguishable from one clearing them, and saving a title wiped
-		// the quiz's schedule.
+
 		ScheduledAtSet    bool
 		AvailableUntil    *time.Time
 		AvailableUntilSet bool

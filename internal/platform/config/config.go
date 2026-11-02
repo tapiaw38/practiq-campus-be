@@ -15,8 +15,6 @@ type (
 		DatabaseURL string
 	}
 
-	// S3Config is optional: when empty, storage degrades to a no-op and
-	// materials can still be created as external links.
 	S3Config struct {
 		AWSRegion          string
 		AWSAccessKeyID     string

@@ -57,8 +57,6 @@ func toQuizData(q domain.Quiz, status unlock.Status) QuizData {
 	}
 }
 
-// QuestionData is the teacher-facing shape: it carries CorrectAnswer, which
-// must never reach a student before they submit an attempt.
 type QuestionData struct {
 	ID            string   `json:"id"`
 	Type          string   `json:"type"`

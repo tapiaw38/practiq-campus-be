@@ -22,13 +22,7 @@ type (
 	SyncInput struct {
 		ID          string
 		ProfileType string
-		// BearerToken is the caller's own "Bearer <jwt>" header, forwarded to
-		// practiq-be so a practiq "student" profile can override the
-		// auth-api-be-role-derived guess (e.g. someone with the global
-		// "admin" role who is still a plain student in practiq), and to
-		// auth-api-be to resolve the caller's own display name — never
-		// trusted from the request body, since that would let the client
-		// claim any name it likes.
+
 		BearerToken string
 	}
 

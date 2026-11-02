@@ -10,9 +10,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
-// requesterOwnsCourse loads the course and confirms the requester is its
-// owner or a superadmin. Returns the course so callers that already need it
-// (update) don't fetch it twice.
 func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) (*domain.Course, apperrors.ApplicationError) {
 	c, err := app.Repositories.Course.Get(ctx, courseID)
 	if err != nil {

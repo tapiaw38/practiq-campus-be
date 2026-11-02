@@ -20,10 +20,6 @@ type (
 	}
 
 	SendInput struct {
-		// ToUserID takes priority when set — the compose UI always resolves
-		// a concrete person via search first, so it should never need to
-		// re-derive identity from an email string. ToEmail stays as a
-		// fallback for any other caller.
 		ToUserID    string
 		ToEmail     string
 		Body        string
@@ -39,9 +35,6 @@ func NewSendUsecase(contextFactory appcontext.Factory) SendUsecase {
 	return &sendUsecase{contextFactory: contextFactory}
 }
 
-// findOrCreateConversation is shared by Send and Broadcast — both ultimately
-// just need "the 1:1 conversation between these two people," created on
-// first contact.
 func findOrCreateConversation(ctx context.Context, app *appcontext.Context, userA, userB string) (string, apperrors.ApplicationError) {
 	id, err := app.Repositories.Conversation.FindDirectBetween(ctx, userA, userB)
 	if err != nil {

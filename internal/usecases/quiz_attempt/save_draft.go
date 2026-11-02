@@ -25,12 +25,6 @@ func NewSaveDraftUsecase(contextFactory appcontext.Factory) SaveDraftUsecase {
 	return &saveDraftUsecase{contextFactory: contextFactory}
 }
 
-// Execute keeps the student's work-in-progress on the server.
-//
-// Nothing is graded and the attempt stays open; this only makes the answers
-// survive leaving the page, which they previously did not. Ownership,
-// deadline and submitted state are settled under a row lock in the
-// repository, so a draft cannot land after the attempt is over.
 func (u *saveDraftUsecase) Execute(ctx context.Context, requesterID, attemptID string, answers []AnswerInput) apperrors.ApplicationError {
 	app := u.contextFactory()
 

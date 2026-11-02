@@ -36,16 +36,11 @@ type (
 
 	Client interface {
 		Register(context.Context, RegisterInput) (*RegisterOutput, error)
-		// GetByEmail forwards the caller's own bearer token (auth-api-be
-		// requires superadmin for this lookup) and returns nil, nil when no
-		// account exists for that email — not found is not an error here.
+
 		GetByEmail(ctx context.Context, bearerToken, email string) (*UserInfo, error)
-		// GetBatch resolves display identity (name/email) for a set of user
-		// ids in one round trip — open to any authenticated caller, unlike
-		// GetByEmail. Unknown ids are silently omitted from the result.
+
 		GetBatch(ctx context.Context, bearerToken string, ids []string) ([]UserInfo, error)
-		// GetTokenVersion reads the version auth-api-be currently holds, so a
-		// token issued before a password change can be refused here too.
+
 		GetTokenVersion(ctx context.Context, bearerToken, userID string) (uint, error)
 	}
 

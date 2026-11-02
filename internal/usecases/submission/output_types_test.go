@@ -9,8 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/storage"
 )
 
-// fakeStorage owns only the objects it was told about, so a test can express
-// "this file belongs to that student" without an S3 config.
 type fakeStorage struct {
 	ownedBy map[string]string
 }
@@ -59,9 +57,6 @@ func TestWithAttachmentsSignsTheSubmittersOwnFiles(t *testing.T) {
 	}
 }
 
-// The submission body is free text, so a student can type any URL into it.
-// Signing one that belongs to somebody else would make the form a way to read
-// other people's files.
 func TestWithAttachmentsIgnoresFilesOwnedBySomeoneElse(t *testing.T) {
 	const theirs = "https://bucket.s3.us-east-1.amazonaws.com/file/submissions/student-2/secreto.pdf"
 	store := fakeStorage{ownedBy: map[string]string{theirs: "student-2"}}
@@ -111,7 +106,6 @@ func TestWithAttachmentsLeavesPlainTextAlone(t *testing.T) {
 	}
 }
 
-// Storage is a no-op in local development; a submission must still serialize.
 func TestWithAttachmentsWithoutStorage(t *testing.T) {
 	data := SubmissionData{UserID: "student-1", Content: "algo", Attachments: make([]AttachmentData, 0)}
 

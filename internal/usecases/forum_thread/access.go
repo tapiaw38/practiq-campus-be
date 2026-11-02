@@ -9,9 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
-// requesterCanAccessCourse is deliberately looser than requesterOwnsCourse
-// elsewhere: a forum is for the course owner AND every enrolled student, not
-// just the teacher — posting is the whole point of a forum.
 func requesterCanAccessCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) apperrors.ApplicationError {
 	if isSuperAdmin {
 		return nil

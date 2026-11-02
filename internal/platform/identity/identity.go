@@ -7,13 +7,8 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/authapi"
 )
 
-// batchSize mirrors auth-api-be's own cap on GET /user/batch.
 const batchSize = 200
 
-// Names resolves display identity for a set of user ids in one or more
-// round trips to auth-api-be, deduplicated and chunked to the endpoint's
-// cap. Unknown ids are simply absent from the result map — callers should
-// fall back to the bare id when a lookup misses.
 func Names(ctx context.Context, client authapi.Client, bearerToken string, ids []string) (map[string]authapi.UserInfo, error) {
 	unique := make(map[string]bool, len(ids))
 	deduped := make([]string, 0, len(ids))
@@ -42,8 +37,6 @@ func Names(ctx context.Context, client authapi.Client, bearerToken string, ids [
 	return result, nil
 }
 
-// FullName joins first and last name, falling back to the bare id when the
-// lookup missed (unknown id, or auth-api-be call failed upstream).
 func FullName(info authapi.UserInfo, fallbackID string) string {
 	name := strings.TrimSpace(info.FirstName + " " + info.LastName)
 	if name == "" {

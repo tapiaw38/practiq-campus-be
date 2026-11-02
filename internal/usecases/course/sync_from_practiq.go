@@ -28,11 +28,6 @@ func NewSyncFromPractiqUsecase(contextFactory appcontext.Factory) SyncFromPracti
 	return &syncFromPractiqUsecase{contextFactory: contextFactory}
 }
 
-// Execute pulls the requesting teacher's own practiq-be subjects and creates
-// a matching Campus course for every one that doesn't have a course linked
-// to it yet — the whole point being the teacher never has to know or type a
-// practiq subject id themselves. Already-linked subjects are skipped, so
-// calling this repeatedly is safe.
 func (u *syncFromPractiqUsecase) Execute(ctx context.Context, requesterID, bearerToken string) (*SyncFromPractiqOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

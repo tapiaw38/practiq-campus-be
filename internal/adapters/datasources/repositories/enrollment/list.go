@@ -39,8 +39,6 @@ func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domai
 	return scanEnrollmentRows(rows)
 }
 
-// ListByUser answers for one institution. A student enrolled in two sees the
-// courses of the one they are looking at, not both lists merged.
 func (r *repository) ListByUser(ctx context.Context, userID string) ([]domain.Enrollment, error) {
 	query, args, err := tenantcontext.NewQuery(ctx).
 		Through("courses", "c", "e.course_id").

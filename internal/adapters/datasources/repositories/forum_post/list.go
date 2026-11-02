@@ -15,16 +15,12 @@ func (r *repository) ListByThread(ctx context.Context, threadID string, options 
 	if options.Offset < 0 {
 		options.Offset = 0
 	}
-	// Pagination deliberately applies only to root posts. Every reply beneath
-	// those roots travels with its conversation, so a thread is never split
-	// across pages or counted as a general forum message.
+
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {
 		return nil, tenantcontext.ErrNoTenant
 	}
-	// Only the anchor needs the tenant: every other row in the tree descends
-	// from a root of this thread by parent_post_id, so a thread in another
-	// institution yields no roots and therefore no replies.
+
 	query := `WITH RECURSIVE root_page AS (
 		SELECT p.id, p.created_at AS root_created_at
 		FROM forum_posts p

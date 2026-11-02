@@ -17,9 +17,6 @@ type repository struct{ db *sql.DB }
 
 func NewRepository(db *sql.DB) Repository { return &repository{db: db} }
 
-// Preferences belong to a person within one institution. Somebody who teaches
-// at two keeps a separate setup in each, so the tenant is part of the key and
-// not merely a filter.
 func (r *repository) Get(ctx context.Context, userID, scope string) (json.RawMessage, bool, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

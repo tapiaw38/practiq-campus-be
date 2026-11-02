@@ -36,11 +36,6 @@ func NewSearchRecipientsUsecase(contextFactory appcontext.Factory) SearchRecipie
 	return &searchRecipientsUsecase{contextFactory: contextFactory}
 }
 
-// Execute answers "who can I message in this course" — the course's owner
-// plus everyone actively enrolled, minus the requester themselves — filtered
-// in Go rather than SQL: a course roster is small (a class), so there's no
-// real cost, and it avoids a bespoke cross-table search query for what is
-// fundamentally list-then-filter.
 func (u *searchRecipientsUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID, query, bearerToken string) (*SearchRecipientsOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

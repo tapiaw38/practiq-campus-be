@@ -12,8 +12,6 @@ func NewSyncHandler(uc ucProfile.SyncUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := middlewares.GetUserID(c)
 
-		// profile_type comes from the token's role, never the body — the same
-		// guard practiq-be uses, so a student cannot declare itself a teacher.
 		profileType := "student"
 		if middlewares.IsTeacher(c) {
 			profileType = "teacher"

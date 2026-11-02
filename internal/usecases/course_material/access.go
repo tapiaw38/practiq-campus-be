@@ -9,8 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 )
 
-// requesterOwnsCourse gates writes: only the course owner (or a superadmin)
-// adds or removes material.
 func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) apperrors.ApplicationError {
 	if isSuperAdmin {
 		return nil
@@ -28,8 +26,6 @@ func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requester
 	return nil
 }
 
-// requesterCanReadCourse gates reads: the owner, a superadmin, or any enrolled
-// student — material is what students come to the course for.
 func requesterCanReadCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) apperrors.ApplicationError {
 	if isSuperAdmin {
 		return nil

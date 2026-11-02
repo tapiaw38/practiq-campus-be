@@ -12,9 +12,6 @@ import (
 
 const tenantContextKey = "campusTenantID"
 
-// RequireTenant resolves selected tenant against Practiq on every request.
-// Header is merely a selector; membership and institution lifecycle decide
-// authorization. This prevents a guessed tenant UUID becoming an access key.
 func RequireTenant(repo tenant.Repository, practiq practiqapi.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.GetHeader("X-Campus-Tenant-ID")
@@ -40,10 +37,7 @@ func RequireTenant(repo tenant.Repository, practiq practiqapi.Client) gin.Handle
 			for _, school := range schools {
 				if school.ID == value.SchoolID && school.Kind == "institution" && school.Billing == "direct" && school.Status == "active" {
 					allowed = true
-					// The role travels with the membership that granted
-					// access, so what the caller may do inside the
-					// institution is decided by practiq-be too — Campus
-					// never assigns it.
+
 					c.Set(tenantcontext.RoleKey, school.Role)
 					break
 				}

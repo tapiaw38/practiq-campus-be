@@ -80,10 +80,6 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID string, isSuper
 		}
 	}
 
-	// A canonical bucket URL is guessable and readable from other courses'
-	// material responses. Without this check a teacher could paste someone
-	// else's object into their own course, and withViewURL would then presign
-	// it for every reader of that course.
 	if input.Kind == domain.MaterialKindFile {
 		if app.Storage == nil || !app.Storage.OwnsFileURL(input.URL, MaterialsFolder, requesterID) {
 			return nil, apperrors.NewApplicationError(mappings.MaterialFileNotOwnedError,

@@ -9,8 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrThreadNotInTenant is returned when the thread belongs to another
-// institution's course.
 var ErrThreadNotInTenant = errors.New("thread does not belong to this tenant")
 
 func (r *repository) Create(ctx context.Context, p domain.ForumPost) (string, error) {

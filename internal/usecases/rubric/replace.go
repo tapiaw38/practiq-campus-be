@@ -37,9 +37,7 @@ func (u *usecase) Replace(c context.Context, uid, id string, sa bool, in []Crite
 	if len(out) == 0 {
 		return apperrors.NewBadRequestError("la rúbrica necesita al menos un criterio")
 	}
-	// The rubric and the maximum it adds up to are written together, and the
-	// repository re-checks under a lock that nothing has been graded — this
-	// read only fails fast in the ordinary case.
+
 	submissions, e := a.Repositories.Submission.ListByAssignment(c, id)
 	if e != nil {
 		return apperrors.NewInternalError(e)

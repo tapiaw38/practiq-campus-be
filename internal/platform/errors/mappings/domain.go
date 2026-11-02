@@ -378,4 +378,60 @@ var (
 		StatusCode:   http.StatusNotFound,
 		Message:      "no student with this email exists in Campus yet",
 	}
+
+	TenantListError = ErrorDetails{
+		InternalCode: "tenant:list-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "could not list Campus institutions",
+	}
+	TenantMembershipUnavailableError = ErrorDetails{
+		InternalCode: "tenant:scope-unavailable",
+		StatusCode:   http.StatusServiceUnavailable,
+		Message:      "could not resolve school membership",
+	}
+	TenantScopeUnavailableError = ErrorDetails{
+		InternalCode: "tenant:scope-unavailable",
+		StatusCode:   http.StatusServiceUnavailable,
+		Message:      "could not reach Practiq",
+	}
+	TenantSchoolNotFoundError = ErrorDetails{
+		InternalCode: "tenant:school-not-found",
+		StatusCode:   http.StatusNotFound,
+		Message:      "no such school in Practiq",
+	}
+	TenantSchoolNotEligibleError = ErrorDetails{
+		InternalCode: "tenant:school-not-eligible",
+		StatusCode:   http.StatusUnprocessableEntity,
+		Message:      "Campus serves active institutions billed by contract; this school is not one",
+	}
+	TenantSchoolNoLongerEligibleError = ErrorDetails{
+		InternalCode: "tenant:school-not-eligible",
+		StatusCode:   http.StatusUnprocessableEntity,
+		Message:      "the school no longer qualifies for Campus",
+	}
+	TenantActivateError = ErrorDetails{
+		InternalCode: "tenant:activate-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "could not enable Campus for this institution",
+	}
+	TenantLookupError = ErrorDetails{
+		InternalCode: "tenant:lookup-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "could not read the institution",
+	}
+	TenantNotFoundError = ErrorDetails{
+		InternalCode: "tenant:not-found",
+		StatusCode:   http.StatusNotFound,
+		Message:      "no such Campus institution",
+	}
+	TenantMemberInstitutionNotFoundError = ErrorDetails{
+		InternalCode: "tenant:not-found",
+		StatusCode:   http.StatusNotFound,
+		Message:      "institution not found",
+	}
+	TenantStatusUpdateError = ErrorDetails{
+		InternalCode: "tenant:status-error",
+		StatusCode:   http.StatusInternalServerError,
+		Message:      "could not change the institution's status",
+	}
 )

@@ -28,9 +28,7 @@ func TestCanManageCourse(t *testing.T) {
 			want:        true,
 		},
 		{
-			// The reason this package exists. Comparing owner_id alone locked
-			// an institution's own administrator out of the courses they are
-			// there to administer.
+
 			name:        "the institution's admin may manage a course they do not own",
 			ctx:         asRole(tenantcontext.RoleAdmin),
 			ownerID:     "teacher-1",
@@ -58,9 +56,7 @@ func TestCanManageCourse(t *testing.T) {
 			want:         true,
 		},
 		{
-			// A request that never resolved a role is not staff. Without this,
-			// an empty role would fall through to the owner comparison and an
-			// empty owner_id would match an empty requester.
+
 			name:        "no role and no owner grants nothing",
 			ctx:         context.Background(),
 			ownerID:     "",
@@ -78,11 +74,8 @@ func TestCanManageCourse(t *testing.T) {
 	}
 }
 
-// The admin's reach is their own institution. The role in context comes from
-// the membership that admitted the request, so it is already the role held
-// *here* — selecting another institution resolves another role, or none.
 func TestAdminRightsDoNotTravelBetweenInstitutions(t *testing.T) {
-	// Same person, a request that resolved no role in this institution.
+
 	if CanManageCourse(context.Background(), "teacher-1", "admin-of-another-school", false) {
 		t.Fatal("a role held in another institution must not grant anything here")
 	}
