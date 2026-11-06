@@ -32,9 +32,6 @@ func NewListMyPractiqStudentsUsecase(contextFactory appcontext.Factory) ListMyPr
 	return &listMyPractiqStudentsUsecase{contextFactory: contextFactory}
 }
 
-// Execute is a pure pass-through to practiq-be, scoped to the caller's own
-// bearer token — it can only ever return that same teacher's own students,
-// same as calling practiq-be directly would.
 func (u *listMyPractiqStudentsUsecase) Execute(ctx context.Context, bearerToken string) (*ListMyPractiqStudentsOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 

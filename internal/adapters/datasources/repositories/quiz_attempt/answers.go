@@ -7,8 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// attemptGuard constrains a write to an attempt of the tenant in context,
-// walking attempt → quiz → course.
 func attemptGuard(ctx context.Context, column string, placeholder int) (string, any, error) {
 	return tenantcontext.ExistsIn(ctx,
 		"quiz_attempts at JOIN quizzes q ON q.id = at.quiz_id JOIN courses c ON c.id = q.course_id",

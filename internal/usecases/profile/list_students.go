@@ -41,13 +41,6 @@ func NewListStudentsUsecase(contextFactory appcontext.Factory) ListStudentsUseca
 	return &listStudentsUsecase{contextFactory: contextFactory}
 }
 
-// Execute lists every locally known Campus profile — both students and
-// teachers — since the admin "Usuarios" screen manages accounts in general,
-// not just students. Name/email no longer live locally, so search and
-// pagination both happen in memory after a single batch identity lookup.
-// ponytail: fine at classroom-app scale (dozens/hundreds of accounts); if
-// the user base grows large, move search to an auth-api-be endpoint that
-// filters server-side instead of fetching every local profile per request.
 func (u *listStudentsUsecase) Execute(ctx context.Context, input ListStudentsInput) (*ListStudentsOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 	if input.Page < 1 {

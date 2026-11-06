@@ -7,8 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Criteria hang off an assignment, which belongs to a tenant through its
-// course.
 func (r *repository) List(c context.Context, a string) (out []domain.RubricCriterion, e error) {
 	out = make([]domain.RubricCriterion, 0)
 	tenantID := tenantcontext.ID(c)

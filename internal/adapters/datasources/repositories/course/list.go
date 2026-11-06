@@ -9,17 +9,12 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Qualified with c.: the JOIN below brings in enrollments, which also has
-// id/status columns, so the bare names in selectCourseColumns (fine for the
-// single-table Get/GetBySlug queries) are ambiguous here.
 const selectQualifiedCourseColumns = `
 	c.id, c.tenant_id, c.owner_id, c.title, c.slug, c.description, c.status, c.start_date, c.end_date, c.created_at, c.updated_at, c.practiq_subject_id, c.labels
 `
 
 func (r *repository) List(ctx context.Context, filter ListFilter) ([]domain.Course, error) {
-	// No tenant is refused rather than left unfiltered. This listing used to
-	// skip the condition when none was set, which answered a request that
-	// never passed RequireTenant with every institution's courses.
+
 	q := tenantcontext.NewQuery(ctx).Own("c.tenant_id")
 
 	from := "courses c"

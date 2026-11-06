@@ -2,17 +2,13 @@ package tenant
 
 import (
 	"errors"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/practiqapi"
 )
 
-func TestForwardMemberError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
+func TestMapUpstreamError(t *testing.T) {
 	cases := map[string]struct {
 		err          error
 		expectedCode int
@@ -37,16 +33,13 @@ func TestForwardMemberError(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			recorder := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(recorder)
+			appErr := mapUpstreamError(tc.err, "tenant:add-member-error", "could not add member to institution")
 
-			forwardMemberError(c, tc.err, "tenant:add-member-error", "could not add member to institution")
-
-			if recorder.Code != tc.expectedCode {
-				t.Fatalf("status = %d, want %d", recorder.Code, tc.expectedCode)
+			if appErr.StatusCode() != tc.expectedCode {
+				t.Fatalf("status = %d, want %d", appErr.StatusCode(), tc.expectedCode)
 			}
-			if !strings.Contains(recorder.Body.String(), tc.expectedBody) {
-				t.Fatalf("body = %s, want it to contain %q", recorder.Body.String(), tc.expectedBody)
+			if !strings.Contains(appErr.Message(), tc.expectedBody) {
+				t.Fatalf("message = %s, want it to contain %q", appErr.Message(), tc.expectedBody)
 			}
 		})
 	}

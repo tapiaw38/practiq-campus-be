@@ -6,12 +6,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// SharesCourseWith decides who may open a conversation with whom, so it
-// answers within one institution.
-//
-// Sharing a course in one institution is not standing to write to somebody in
-// another. Unscoped, two people who teach together in one of them could open a
-// thread from the other, where they have no relationship at all.
 func (r *repository) SharesCourseWith(ctx context.Context, userA, userB string) (bool, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

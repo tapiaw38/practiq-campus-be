@@ -14,8 +14,7 @@ type createInput struct {
 	Title        string  `json:"title" binding:"required"`
 	Description  string  `json:"description"`
 	Kind         string  `json:"kind" binding:"required"`
-	// URL is the value returned by POST /uploads for kind="file", or the
-	// external address the teacher pasted for kind="link".
+
 	URL string `json:"url" binding:"required"`
 }
 

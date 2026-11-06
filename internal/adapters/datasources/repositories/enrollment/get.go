@@ -8,7 +8,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Qualified for the tenant join, which brings courses into scope.
 const selectQualifiedEnrollmentColumns = `
 	e.id, e.course_id, e.user_id, e.enrollment_role, e.status, e.enrolled_at
 `

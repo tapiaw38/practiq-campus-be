@@ -10,9 +10,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 )
 
-// requesterCanAccessThread loads the thread and confirms the requester can
-// see the course it belongs to (owner, superadmin, or enrolled) — a post
-// can't be created/listed without first resolving which course gates it.
 func requesterCanAccessThread(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, threadID string) (*domain.ForumThread, apperrors.ApplicationError) {
 	thread, err := app.Repositories.ForumThread.Get(ctx, threadID)
 	if err != nil {

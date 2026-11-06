@@ -7,12 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// FindDirectBetween looks only inside the tenant in context.
-//
-// Two people can share more than one institution, and a conversation belongs
-// to exactly one of them. Without the scope, writing to a colleague from one
-// institution would reopen the thread held in the other and show its history
-// to a context it never belonged to.
 func (r *repository) FindDirectBetween(ctx context.Context, userA, userB string) (string, error) {
 	query, args, err := tenantcontext.NewQuery(ctx).
 		Own("c.tenant_id").
@@ -35,7 +29,6 @@ func (r *repository) FindDirectBetween(ctx context.Context, userA, userB string)
 	return id, err
 }
 
-// CreateDirect stamps the conversation with the tenant it is being held in.
 func (r *repository) CreateDirect(ctx context.Context, userA, userB string) (string, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

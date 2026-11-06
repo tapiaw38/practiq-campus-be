@@ -12,9 +12,7 @@ func (r *repository) Create(ctx context.Context, c domain.Course) (string, error
 	if c.TenantID == "" {
 		c.TenantID = tenantcontext.ID(ctx)
 	}
-	// tenant_id is still nullable in the schema, so an insert with no tenant
-	// would succeed and leave a course belonging to no institution — visible
-	// to nobody, counted by nothing, and impossible to attribute later.
+
 	if c.TenantID == "" {
 		return "", tenantcontext.ErrNoTenant
 	}

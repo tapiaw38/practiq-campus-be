@@ -11,9 +11,7 @@ type Repository interface {
 	Upsert(context.Context, domain.Profile) error
 	Get(context.Context, string) (*domain.Profile, error)
 	ListByType(context.Context, string) ([]domain.Profile, error)
-	// ListAll has no text search — name/email no longer live locally, so
-	// search-by-text now happens app-side against auth-api-be identity.
-	// See usecases/profile.ListStudentsUsecase.
+
 	ListAll(context.Context, int, int) ([]domain.Profile, int, error)
 	SetBlocked(context.Context, string, bool) error
 }

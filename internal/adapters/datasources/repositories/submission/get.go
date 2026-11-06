@@ -8,14 +8,10 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Qualified for the tenant chain: submissions reach an institution through
-// their assignment's course, two hops away.
 const selectQualifiedSubmissionColumns = `
 	s.id, s.assignment_id, s.user_id, s.content, s.status, s.version, s.score, s.feedback, s.submitted_at, s.graded_at
 `
 
-// tenantChain is the path every submission query walks: submission → assignment
-// → course, where the tenant lives.
 func tenantChain(ctx context.Context) *tenantcontext.Query {
 	return tenantcontext.NewQuery(ctx).
 		Join("assignments", "a", "s.assignment_id").
@@ -35,8 +31,6 @@ func scanSubmission(row interface{ Scan(...any) error }) (*domain.Submission, er
 	return &s, nil
 }
 
-// Get holds a student's work and their grade, so an id from another
-// institution must not resolve here.
 func (r *repository) Get(ctx context.Context, id string) (*domain.Submission, error) {
 	query, args, err := tenantChain(ctx).Where("s.id = ?", id).
 		SQL(selectQualifiedSubmissionColumns, "submissions s")

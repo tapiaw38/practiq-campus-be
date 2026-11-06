@@ -35,9 +35,6 @@ func NewBroadcastUsecase(contextFactory appcontext.Factory) BroadcastUsecase {
 	return &broadcastUsecase{contextFactory: contextFactory}
 }
 
-// Execute reuses the plain 1:1 conversation model — one message gets
-// appended to (or starts) a separate conversation with every actively
-// enrolled student, rather than introducing a group-message concept.
 func (u *broadcastUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string, input BroadcastInput) (*BroadcastOutput, apperrors.ApplicationError) {
 	if strings.TrimSpace(input.Body) == "" {
 		return nil, apperrors.NewBadRequestError("body is required")

@@ -36,8 +36,6 @@ func NewCreateUsecase(contextFactory appcontext.Factory) CreateUsecase {
 	return &createUsecase{contextFactory: contextFactory}
 }
 
-// Execute is any authenticated user — the enrollment check below (not a
-// teacherOnly gate) is what actually decides whether they may submit.
 func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID string, input CreateInput) (*CreateOutput, apperrors.ApplicationError) {
 	if strings.TrimSpace(input.Content) == "" {
 		return nil, apperrors.NewBadRequestError("content is required")
@@ -84,9 +82,7 @@ func (u *createUsecase) Execute(ctx context.Context, requesterID, assignmentID s
 		if a.DueAt != nil && time.Now().After(*a.DueAt) {
 			return nil, apperrors.NewBadRequestError("el plazo de entrega ya venció")
 		}
-		// The repository re-checks this under a row lock and refuses if a
-		// grade arrived in the meantime; the check above stays only to fail
-		// fast in the ordinary case.
+
 		if err := app.Repositories.Submission.Resubmit(ctx, existing.ID, input.Content); err != nil {
 			if errors.Is(err, submissionrepo.ErrSubmissionGraded) {
 				return nil, apperrors.NewBadRequestError("la entrega ya fue corregida y no puede modificarse")

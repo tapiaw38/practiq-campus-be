@@ -29,9 +29,6 @@ const selectCourseColumns = `
 	id, tenant_id, owner_id, title, slug, description, status, start_date, end_date, created_at, updated_at, practiq_subject_id, labels
 `
 
-// Get reads one course of the tenant in context. A course id from another
-// institution simply is not found: it is not a permission the caller is denied
-// afterwards, it is a row the query never returns.
 func (r *repository) Get(ctx context.Context, id string) (*domain.Course, error) {
 	query, args, err := tenantcontext.NewQuery(ctx).
 		Where("c.id = ?", id).
@@ -43,12 +40,8 @@ func (r *repository) Get(ctx context.Context, id string) (*domain.Course, error)
 	return scanCourse(r.db.QueryRowContext(ctx, query, args...))
 }
 
-// GetBySlug takes the tenant explicitly because slugs are only unique within
-// one: the same slug in two institutions is two different courses.
 func (r *repository) GetBySlug(ctx context.Context, tenantID, slug string) (*domain.Course, error) {
-	// Callers may omit tenantID when operating inside an HTTP request. Resolve
-	// it from validated tenant middleware instead of sending an empty string to
-	// PostgreSQL's UUID parameter.
+
 	if tenantID == "" {
 		tenantID = tenantcontext.ID(ctx)
 	}

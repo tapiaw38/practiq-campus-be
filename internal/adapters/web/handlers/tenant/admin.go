@@ -4,84 +4,23 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	tenantRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/tenant"
-	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/practiqapi"
 	"github.com/tapiaw38/practiq-campus-be/internal/domain"
+	ucTenant "github.com/tapiaw38/practiq-campus-be/internal/usecases/tenant"
 )
 
-// adminData carries the school's own details alongside the Campus record, so
-// an operator sees a name rather than a pair of UUIDs. The name is read from
-// practiq-be every time instead of copied here: a school renamed there must
-// not go on showing its old name in Campus.
-type adminData struct {
-	ID       string `json:"id"`
-	SchoolID string `json:"school_id"`
-	Name     string `json:"name"`
-	Status   string `json:"status"`
-	// Eligible reports whether the school still qualifies for Campus. A tenant
-	// whose school was closed or moved off contract billing keeps its record
-	// but stops qualifying, and an operator needs to see that.
-	Eligible bool `json:"eligible"`
-}
-
-// eligible is the single definition of which institutions Campus may serve.
-//
-// Campus exists for institutions invoiced by contract. A personal school, or
-// one on a per-student subscription, is billed by Practiq and is not a Campus
-// customer — enabling one would hand it a product nobody agreed to sell.
-func eligible(school practiqapi.SchoolInfo) bool {
-	return school.Kind == "institution" &&
-		school.Billing == "direct" &&
-		school.Status == "active"
-}
-
-func schoolsByID(schools []practiqapi.SchoolInfo) map[string]practiqapi.SchoolInfo {
-	index := make(map[string]practiqapi.SchoolInfo, len(schools))
-	for _, school := range schools {
-		index[school.ID] = school
-	}
-	return index
-}
-
-// List shows every Campus institution to a platform superadmin, joined with
-// what practiq-be currently says about each school.
-func List(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func List(uc ucTenant.ListUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tenants, err := repo.List(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:list-error", "message": "could not list Campus institutions"})
+		output, appErr := uc.Execute(c, ucTenant.ListInput{BearerToken: c.GetHeader("Authorization")})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
-		schools, err := practiq.ListAllSchools(c, c.GetHeader("Authorization"))
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "tenant:scope-unavailable", "message": "could not reach Practiq"})
-			return
-		}
-		index := schoolsByID(schools)
-
-		result := make([]adminData, 0, len(tenants))
-		for _, value := range tenants {
-			school := index[value.SchoolID]
-			result = append(result, adminData{
-				ID:       value.ID,
-				SchoolID: value.SchoolID,
-				Name:     school.Name,
-				Status:   value.Status,
-				Eligible: eligible(school),
-			})
-		}
-		c.JSON(http.StatusOK, gin.H{"data": result})
+		c.JSON(http.StatusOK, output)
 	}
 }
 
-// Activate enables Campus for one institution.
-//
-// The school is verified against practiq-be rather than taken from the
-// request: the caller supplies an id, and everything that decides whether it
-// qualifies — that it exists, is an institution, is billed by contract and is
-// still open — is read from the service that owns those facts.
-func Activate(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func Activate(uc ucTenant.ActivateUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input struct {
 			SchoolID string `json:"school_id" binding:"required"`
@@ -91,41 +30,17 @@ func Activate(repo tenantRepo.Repository, practiq practiqapi.Client) gin.Handler
 			return
 		}
 
-		schools, err := practiq.ListAllSchools(c, c.GetHeader("Authorization"))
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "tenant:scope-unavailable", "message": "could not reach Practiq"})
+		output, appErr := uc.Execute(c, ucTenant.ActivateInput{BearerToken: c.GetHeader("Authorization"), SchoolID: input.SchoolID})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
-		school, found := schoolsByID(schools)[input.SchoolID]
-		if !found {
-			c.JSON(http.StatusNotFound, gin.H{"code": "tenant:school-not-found", "message": "no such school in Practiq"})
-			return
-		}
-		if !eligible(school) {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"code":    "tenant:school-not-eligible",
-				"message": "Campus serves active institutions billed by contract; this school is not one",
-			})
-			return
-		}
-
-		value, err := repo.Create(c, domain.Tenant{SchoolID: school.ID, Status: domain.TenantStatusActive})
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:activate-error", "message": "could not enable Campus for this institution"})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{"data": adminData{
-			ID: value.ID, SchoolID: value.SchoolID, Name: school.Name, Status: value.Status, Eligible: true,
-		}})
+		c.JSON(http.StatusCreated, output)
 	}
 }
 
-// SetStatus suspends, reopens or closes a Campus institution.
-//
-// Suspension and closure both stop access — RequireTenant admits only an
-// active tenant — and neither deletes anything: the institution's courses and
-// work survive so a suspension can be lifted and a closure can be looked at.
-func SetStatus(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func SetStatus(uc ucTenant.SetStatusUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input struct {
 			Status string `json:"status" binding:"required"`
@@ -141,82 +56,28 @@ func SetStatus(repo tenantRepo.Repository, practiq practiqapi.Client) gin.Handle
 			return
 		}
 
-		existing, err := repo.Get(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:lookup-error", "message": "could not read the institution"})
+		output, appErr := uc.Execute(c, ucTenant.SetStatusInput{
+			BearerToken: c.GetHeader("Authorization"),
+			TenantID:    c.Param("id"),
+			Status:      input.Status,
+		})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
-		if existing == nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": "tenant:not-found", "message": "no such Campus institution"})
-			return
-		}
-
-		// Reopening re-checks the school: one closed in Practiq, or moved onto
-		// a subscription, must not come back through Campus.
-		if input.Status == domain.TenantStatusActive {
-			schools, err := practiq.ListAllSchools(c, c.GetHeader("Authorization"))
-			if err != nil {
-				c.JSON(http.StatusServiceUnavailable, gin.H{"code": "tenant:scope-unavailable", "message": "could not reach Practiq"})
-				return
-			}
-			school, found := schoolsByID(schools)[existing.SchoolID]
-			if !found || !eligible(school) {
-				c.JSON(http.StatusUnprocessableEntity, gin.H{
-					"code":    "tenant:school-not-eligible",
-					"message": "the school no longer qualifies for Campus",
-				})
-				return
-			}
-		}
-
-		value, err := repo.SetStatus(c, existing.ID, input.Status)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:status-error", "message": "could not change the institution's status"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"data": adminData{
-			ID: value.ID, SchoolID: value.SchoolID, Status: value.Status,
-		}})
+		c.JSON(http.StatusOK, output)
 	}
 }
 
-// EligibleSchools lists the institutions Campus could be enabled for and has
-// not been yet.
-//
-// Enabling one used to mean pasting a uuid copied from another product: the
-// operator had to know the id, and a typo came back as "no such school"
-// without saying which part was wrong. The server already knows which schools
-// qualify, so it offers them instead of asking.
-func EligibleSchools(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func EligibleSchools(uc ucTenant.ListEligibleSchoolsUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		schools, err := practiq.ListAllSchools(c, c.GetHeader("Authorization"))
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "tenant:scope-unavailable", "message": "could not reach Practiq"})
+		output, appErr := uc.Execute(c, ucTenant.ListEligibleSchoolsInput{BearerToken: c.GetHeader("Authorization")})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
-		tenants, err := repo.List(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "tenant:list-error", "message": "could not list Campus institutions"})
-			return
-		}
-
-		// Already enabled ones are left out rather than shown and refused: the
-		// list is meant to be a set of choices that work.
-		enabled := make(map[string]bool, len(tenants))
-		for _, value := range tenants {
-			enabled[value.SchoolID] = true
-		}
-
-		type schoolOption struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		}
-		result := make([]schoolOption, 0)
-		for _, school := range schools {
-			if eligible(school) && !enabled[school.ID] {
-				result = append(result, schoolOption{ID: school.ID, Name: school.Name})
-			}
-		}
-		c.JSON(http.StatusOK, gin.H{"data": result})
+		c.JSON(http.StatusOK, output)
 	}
 }

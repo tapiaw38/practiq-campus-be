@@ -11,8 +11,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// A nil checker skips the revocation lookup, leaving a token good until it
-// expires — the behaviour before auth-api-be could be asked about it.
 func AuthMiddleware(profiles profileRepo.Repository, checker *revocation.Checker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -86,10 +84,6 @@ func HasRole(c *gin.Context, expected ...string) bool {
 	return false
 }
 
-// Los roles vienen de auth-api-be, compartido con practiq-be: solo existen
-// tres — user es el alumno, admin el profesor, superadmin el administrador de
-// la plataforma. Campus no agrega roles propios a nivel de token; el rol
-// dentro de un curso puntual (ayudante, co-docente) vive en enrollments, no acá.
 const (
 	RoleStudent    = "user"
 	RoleTeacher    = "admin"
@@ -115,10 +109,6 @@ func RequireRoles(expected ...string) gin.HandlerFunc {
 	}
 }
 
-// RequireTenantStaff is deliberately separate from RequireRoles. Auth's
-// `admin` role is platform-wide and only says the identity may teach
-// somewhere; whether they may manage this Campus institution is determined by
-// the active school membership attached by RequireTenant.
 func RequireTenantStaff() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if IsSuperAdmin(c) || tenantcontext.IsAdmin(c) || tenantcontext.Role(c) == tenantcontext.RoleTeacher {

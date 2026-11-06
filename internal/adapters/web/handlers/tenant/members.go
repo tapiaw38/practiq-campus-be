@@ -1,53 +1,44 @@
 package tenant
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	tenantRepo "github.com/tapiaw38/practiq-campus-be/internal/adapters/datasources/repositories/tenant"
-	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/integrations/practiqapi"
 	"github.com/tapiaw38/practiq-campus-be/internal/adapters/web/middlewares"
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
+	ucTenant "github.com/tapiaw38/practiq-campus-be/internal/usecases/tenant"
 )
 
-func forwardMemberError(c *gin.Context, err error, code, message string) {
-	var upstream *practiqapi.UpstreamError
-	if errors.As(err, &upstream) && upstream.Status >= 400 && upstream.Status < 500 {
-		c.JSON(upstream.Status, gin.H{"code": upstream.Code, "message": upstream.Message})
-		return
+func requireSchoolAdmin(c *gin.Context) bool {
+	if middlewares.IsSuperAdmin(c) || tenantcontext.IsAdmin(c) {
+		return true
 	}
-	c.JSON(http.StatusBadGateway, gin.H{"code": code, "message": message})
+	c.JSON(http.StatusForbidden, gin.H{"code": "tenant:admin-required", "message": "school administrator access required"})
+	return false
 }
 
-// SchoolMembers exposes membership only after RequireTenant has bound the
-// request. The selected Campus tenant determines school_id; client input never
-// chooses a school, so an institution admin cannot pivot into another one.
-func SchoolMembers(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func SchoolMembers(uc ucTenant.ListMembersUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !middlewares.IsSuperAdmin(c) && !tenantcontext.IsAdmin(c) {
-			c.JSON(http.StatusForbidden, gin.H{"code": "tenant:admin-required", "message": "school administrator access required"})
+		if !requireSchoolAdmin(c) {
 			return
 		}
-		value, err := repo.Get(c, middlewares.GetTenantID(c))
-		if err != nil || value == nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": "tenant:not-found", "message": "institution not found"})
+		output, appErr := uc.Execute(c, ucTenant.ListMembersInput{
+			BearerToken: c.GetHeader("Authorization"),
+			TenantID:    middlewares.GetTenantID(c),
+		})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
-		members, err := practiq.ListSchoolMembers(c, c.GetHeader("Authorization"), value.SchoolID)
-		if err != nil {
-			forwardMemberError(c, err, "tenant:members-unavailable", "could not load institution members")
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"data": members})
+		c.JSON(http.StatusOK, output)
 	}
 }
 
-func AddSchoolMember(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func AddSchoolMember(uc ucTenant.AddMemberUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !middlewares.IsSuperAdmin(c) && !tenantcontext.IsAdmin(c) {
-			c.JSON(http.StatusForbidden, gin.H{"code": "tenant:admin-required", "message": "school administrator access required"})
+		if !requireSchoolAdmin(c) {
 			return
 		}
 		var input struct {
@@ -62,32 +53,36 @@ func AddSchoolMember(repo tenantRepo.Repository, practiq practiqapi.Client) gin.
 			c.JSON(http.StatusBadRequest, gin.H{"code": "tenant:bad-role", "message": "role must be admin, teacher, or student"})
 			return
 		}
-		value, err := repo.Get(c, middlewares.GetTenantID(c))
-		if err != nil || value == nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": "tenant:not-found", "message": "institution not found"})
-			return
-		}
-		if err := practiq.AddSchoolMember(c, c.GetHeader("Authorization"), value.SchoolID, strings.TrimSpace(input.UserID), input.Role); err != nil {
-			forwardMemberError(c, err, "tenant:add-member-error", "could not add member to institution")
+
+		appErr := uc.Execute(c, ucTenant.AddMemberInput{
+			BearerToken: c.GetHeader("Authorization"),
+			TenantID:    middlewares.GetTenantID(c),
+			UserID:      strings.TrimSpace(input.UserID),
+			Role:        input.Role,
+		})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
 		c.Status(http.StatusNoContent)
 	}
 }
 
-func RemoveSchoolMember(repo tenantRepo.Repository, practiq practiqapi.Client) gin.HandlerFunc {
+func RemoveSchoolMember(uc ucTenant.RemoveMemberUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !middlewares.IsSuperAdmin(c) && !tenantcontext.IsAdmin(c) {
-			c.JSON(http.StatusForbidden, gin.H{"code": "tenant:admin-required", "message": "school administrator access required"})
+		if !requireSchoolAdmin(c) {
 			return
 		}
-		value, err := repo.Get(c, middlewares.GetTenantID(c))
-		if err != nil || value == nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": "tenant:not-found", "message": "institution not found"})
-			return
-		}
-		if err := practiq.RemoveSchoolMember(c, c.GetHeader("Authorization"), value.SchoolID, c.Param("userID")); err != nil {
-			forwardMemberError(c, err, "tenant:remove-member-error", "could not remove member from institution")
+
+		appErr := uc.Execute(c, ucTenant.RemoveMemberInput{
+			BearerToken: c.GetHeader("Authorization"),
+			TenantID:    middlewares.GetTenantID(c),
+			UserID:      c.Param("userID"),
+		})
+		if appErr != nil {
+			appErr.Log(c)
+			c.JSON(appErr.StatusCode(), appErr)
 			return
 		}
 		c.Status(http.StatusNoContent)

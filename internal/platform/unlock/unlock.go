@@ -1,8 +1,3 @@
-// Package unlock resolves the single prerequisite an assignment or quiz may
-// declare (UnlockAfterType/UnlockAfterID) against one student's progress.
-// It is shared because both assignment and quiz usecases need the same
-// answer — listing (to flag an item locked) and creating a submission or
-// starting an attempt (to actually reject it), so the rule is defined once.
 package unlock
 
 import (
@@ -17,9 +12,6 @@ type Status struct {
 	Reason string
 }
 
-// Check meets the prerequisite with a submission (assignment) or a submitted
-// attempt (quiz) — never a passing grade, so a slow teacher can never
-// permanently lock a student out of the rest of the course.
 func Check(ctx context.Context, repos *repositories.Repositories, unlockAfterType, unlockAfterID *string, studentID string) (Status, error) {
 	if unlockAfterType == nil || unlockAfterID == nil || studentID == "" {
 		return Status{}, nil

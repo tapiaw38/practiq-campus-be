@@ -18,8 +18,6 @@ type ConversationSummary struct {
 }
 
 type Repository interface {
-	// FindDirectBetween returns the existing 1:1 conversation between
-	// exactly these two users, or "" if none exists yet.
 	FindDirectBetween(ctx context.Context, userA, userB string) (string, error)
 	CreateDirect(ctx context.Context, userA, userB string) (string, error)
 	AddMessage(ctx context.Context, conversationID, senderID, body string) (string, error)

@@ -27,10 +27,7 @@ type (
 	GradeInput struct {
 		Score    int
 		Feedback string
-		// Version is the submission the teacher actually reviewed. Zero means
-		// the client did not send one, which is accepted as "whatever is
-		// current" so older clients keep working — they simply do not get the
-		// protection.
+
 		Version      int
 		RubricScores []RubricScoreInput
 	}
@@ -79,8 +76,6 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 		}
 	}
 
-	// A client that sends no version is grading whatever is current; one that
-	// does is grading the version it read, and loses if that moved.
 	expectedVersion := input.Version
 	if expectedVersion == 0 {
 		expectedVersion = s.Version
@@ -120,12 +115,7 @@ func (u *gradeUsecase) Execute(ctx context.Context, requesterID string, isSuperA
 			total += inputScore.Score
 			scores = append(scores, domain.RubricScore{SubmissionID: submissionID, CriterionID: criterion.ID, Score: inputScore.Score, Feedback: strings.TrimSpace(inputScore.Feedback)})
 		}
-		// Each criterion is checked against its own maximum, but the sum was
-		// never checked against the assignment's. The two are kept equal when
-		// either is edited — now in both directions — yet an assignment whose
-		// maximum was lowered before that rule existed can still hold a
-		// rubric totalling more, and recording 100 out of 10 would make the
-		// grade meaningless.
+
 		if total > a.MaxScore {
 			return nil, apperrors.NewBadRequestError("la rúbrica suma más que el puntaje máximo de la tarea: revisala antes de corregir")
 		}

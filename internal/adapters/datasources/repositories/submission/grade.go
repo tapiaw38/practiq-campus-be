@@ -7,13 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// Grade writes a mark onto a student's work, so it is guarded by the same
-// chain the reads use: a submission id from another institution updates
-// nothing.
-// The version the teacher reviewed must still be the current one. Locking the
-// resubmission path stopped it erasing a finished grade, but not the reverse:
-// a student resubmitting while the teacher was writing left the grade landing
-// on content nobody had read. The version makes that visible instead.
 func (r *repository) Grade(ctx context.Context, id string, score int, feedback string, expectedVersion int) error {
 	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
 		"assignments a JOIN courses c ON c.id = a.course_id",

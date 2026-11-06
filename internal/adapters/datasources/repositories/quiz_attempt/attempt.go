@@ -9,23 +9,18 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrQuizNotInTenant is returned when the quiz belongs to another institution.
 var ErrQuizNotInTenant = errors.New("quiz does not belong to this tenant")
 
-// Qualified for the tenant chain: attempts reach an institution through their
-// quiz's course.
 const selectQualifiedAttemptColumns = `
 	at.id, at.quiz_id, at.user_id, at.attempt_number, at.started_at, at.expires_at, at.submitted_at, at.score, at.max_score
 `
 
-// tenantChain is the path every attempt query walks: attempt → quiz → course.
 func tenantChain(ctx context.Context) *tenantcontext.Query {
 	return tenantcontext.NewQuery(ctx).
 		Join("quizzes", "q", "at.quiz_id").
 		Through("courses", "c", "q.course_id")
 }
 
-// quizGuard constrains a write to a quiz of the tenant in context.
 func quizGuard(ctx context.Context, column string, placeholder int) (string, any, error) {
 	return tenantcontext.ExistsIn(ctx,
 		"quizzes q JOIN courses c ON c.id = q.course_id", "q.id = "+column, "c.tenant_id", placeholder)
@@ -43,8 +38,6 @@ func scanAttempt(row interface{ Scan(...any) error }) (*domain.QuizAttempt, erro
 	return &a, nil
 }
 
-// Get carries a student's score, so an attempt id from another institution
-// must not resolve.
 func (r *repository) Get(ctx context.Context, id string) (*domain.QuizAttempt, error) {
 	query, args, err := tenantChain(ctx).Where("at.id = ?", id).
 		SQL(selectQualifiedAttemptColumns, "quiz_attempts at")
@@ -54,8 +47,6 @@ func (r *repository) Get(ctx context.Context, id string) (*domain.QuizAttempt, e
 	return scanAttempt(r.db.QueryRowContext(ctx, query, args...))
 }
 
-// CountByUser decides whether another attempt is allowed, so it counts within
-// the institution the quiz belongs to.
 func (r *repository) CountByUser(ctx context.Context, quizID, userID string) (int, error) {
 	query, args, err := tenantChain(ctx).
 		Where("at.quiz_id = ?", quizID).

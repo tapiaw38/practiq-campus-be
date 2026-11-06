@@ -28,18 +28,6 @@ func NewDuplicateUsecase(contextFactory appcontext.Factory) DuplicateUsecase {
 	return &duplicateUsecase{contextFactory: contextFactory}
 }
 
-// Execute clones a course's structure — sections, assignments with their
-// rubric, quizzes with their questions, and materials — into a new draft
-// course the requester owns. It deliberately does not carry over
-// enrollments, submissions, quiz attempts, forum threads, calendar events or
-// groups: those belong to a specific run of the course, not the course
-// itself, so a "new academic year" copy starts empty of them.
-//
-// ponytail: visible_group_id and unlock_after are cleared rather than
-// remapped — a duplicated course has no groups yet, and remapping a
-// prerequisite chain across two id spaces is real complexity nobody has
-// asked for. Re-wire them by hand after duplicating if you need them; add
-// remapping if that becomes a real pain point.
 func (u *duplicateUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, courseID string) (*DuplicateOutput, apperrors.ApplicationError) {
 	app := u.contextFactory()
 
@@ -119,8 +107,7 @@ func (u *duplicateUsecase) Execute(ctx context.Context, requesterID string, isSu
 			for _, c := range criteria {
 				copied = append(copied, domain.RubricCriterion{Title: c.Title, Description: c.Description, MaxScore: c.MaxScore})
 			}
-			// The copy keeps the source's maximum, which the copied criteria
-			// already add up to.
+
 			_ = app.Repositories.Rubric.Replace(ctx, newID, copied, a.MaxScore)
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrQuizNotInTenant is returned when the quiz belongs to another institution.
 var ErrQuizNotInTenant = errors.New("quiz does not belong to this tenant")
 
 func (r *repository) ListQuestions(ctx context.Context, quizID string) ([]domain.QuizQuestion, error) {
@@ -41,9 +40,6 @@ func (r *repository) ListQuestions(ctx context.Context, quizID string) ([]domain
 	return questions, rows.Err()
 }
 
-// ReplaceQuestions empties the quiz's question bank before rewriting it, so
-// the tenant guard has to hold before the delete: without it a quiz id from
-// another institution would wipe that institution's questions.
 func (r *repository) ReplaceQuestions(ctx context.Context, quizID string, in []domain.QuizQuestion) error {
 	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
 		"quizzes q JOIN courses c ON c.id = q.course_id", "q.id = $1", "c.tenant_id", 2)

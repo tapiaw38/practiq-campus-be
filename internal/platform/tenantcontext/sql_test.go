@@ -10,8 +10,6 @@ func withTenant(id string) context.Context {
 	return context.WithValue(context.Background(), Key, id)
 }
 
-// The invariant every other test rests on. A statement built without a tenant
-// must not be runnable at all — not run unfiltered, not run matching nothing.
 func TestQueryRefusesToBuildWithoutATenant(t *testing.T) {
 	_, _, err := NewQuery(context.Background()).Own("c.tenant_id").SQL("c.id", "courses c")
 	if err != ErrNoTenant {
@@ -35,8 +33,6 @@ func TestOwnConstrainsTheTableItself(t *testing.T) {
 	}
 }
 
-// A child row is reached through the ancestor that carries the tenant, and the
-// constraint travels with the join rather than being a separate check.
 func TestThroughConstrainsViaTheAncestor(t *testing.T) {
 	sql, _, err := NewQuery(withTenant("t1")).
 		Through("courses", "c", "a.course_id").
@@ -50,8 +46,6 @@ func TestThroughConstrainsViaTheAncestor(t *testing.T) {
 	}
 }
 
-// Two hops: a submission belongs to a tenant only through its assignment's
-// course. Neither table in between carries tenant_id.
 func TestChainWalksToTheTenantOwningTable(t *testing.T) {
 	sql, _, err := NewQuery(withTenant("t1")).
 		Join("assignments", "a", "s.assignment_id").
@@ -69,8 +63,6 @@ func TestChainWalksToTheTenantOwningTable(t *testing.T) {
 	}
 }
 
-// Placeholders have to keep counting across the caller's arguments and the
-// tenant's, or the wrong value binds to the wrong column.
 func TestPlaceholdersDoNotCollide(t *testing.T) {
 	sql, args, err := NewQuery(withTenant("t1")).
 		Where("a.id = ?", "a1").

@@ -28,8 +28,6 @@ func (r *repository) RemoveMember(ctx context.Context, groupID, userID string) e
 	return err
 }
 
-// IsMember gates group-restricted content, so it answers within one
-// institution: the same person in another is not a member here.
 func (r *repository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

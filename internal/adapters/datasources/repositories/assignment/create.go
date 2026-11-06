@@ -9,13 +9,8 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrCourseNotInTenant is returned when the course an assignment is being
-// created under does not belong to the tenant in context.
 var ErrCourseNotInTenant = errors.New("course does not belong to this tenant")
 
-// Create refuses a course from another institution. The insert selects its
-// course through the tenant, so a forged course_id writes no row rather than
-// planting one in somebody else's course.
 func (r *repository) Create(ctx context.Context, a domain.Assignment) (string, error) {
 	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
 		"courses c", "c.id = $1", "c.tenant_id", 11)

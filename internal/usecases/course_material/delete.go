@@ -22,9 +22,6 @@ func NewDeleteUsecase(contextFactory appcontext.Factory) DeleteUsecase {
 	return &deleteUsecase{contextFactory: contextFactory}
 }
 
-// Execute removes the row but deliberately leaves the S3 object in place:
-// deleting is cheap to undo when the row is gone but the bytes are not, and
-// an orphaned object costs storage, not correctness.
 func (u *deleteUsecase) Execute(ctx context.Context, requesterID string, isSuperAdmin bool, materialID string) apperrors.ApplicationError {
 	app := u.contextFactory()
 

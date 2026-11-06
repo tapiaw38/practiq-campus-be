@@ -11,10 +11,6 @@ import (
 )
 
 type (
-	// These carry the wire names practiq-be uses, so handing one straight to
-	// c.JSON keeps the shape Campus's frontend reads. Without them Go emits
-	// the Go field names instead, which is how member cards once rendered
-	// blank: every value arrived, under a key nobody was looking at.
 	ProfileInfo struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -51,26 +47,14 @@ type (
 		CreatedBy   string `json:"created_by"`
 	}
 
-	// Client talks to practiq-be's own profile endpoint, so Campus can tell
-	// whether a shared identity is already known there as a student or a
-	// teacher before deciding how to provision it locally.
 	Client interface {
-		// GetProfile returns nil, nil when practiq-be has no profile for
-		// that id — not found is not an error here.
 		GetProfile(ctx context.Context, bearerToken, id string) (*ProfileInfo, error)
-		// ListMyStudents forwards the caller's own bearer token to
-		// practiq-be's teacher-student-assignments — it always returns that
-		// teacher's own list, nothing else.
+
 		ListMyStudents(ctx context.Context, bearerToken string) ([]StudentInfo, error)
-		// ListSubjects returns practiq-be's full subject catalog (it has no
-		// per-teacher filter of its own) — callers filter by CreatedBy
-		// themselves when they only want "my" subjects.
+
 		ListSubjects(ctx context.Context, bearerToken string) ([]SubjectInfo, error)
 		ListMySchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error)
-		// ListAllSchools is practiq-be's platform-wide listing, which it only
-		// serves to a superadmin. Campus uses it to confirm a school exists
-		// and qualifies before enabling it, rather than trusting the id it was
-		// handed. Read-only: practiq-be stays the owner of school records.
+
 		ListAllSchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error)
 		ListSchoolMembers(ctx context.Context, bearerToken, schoolID string) ([]SchoolMemberInfo, error)
 		AddSchoolMember(ctx context.Context, bearerToken, schoolID, userID, role string) error
@@ -143,9 +127,6 @@ func (c *client) ListMySchools(ctx context.Context, bearerToken string) ([]Schoo
 	return result, nil
 }
 
-// ListAllSchools reads every school practiq-be knows. Authorisation is
-// practiq-be's: it refuses this to anyone who is not a platform superadmin, so
-// Campus does not get a second, weaker copy of that rule.
 func (c *client) ListAllSchools(ctx context.Context, bearerToken string) ([]SchoolInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/schools", nil)
 	if err != nil {
@@ -295,8 +276,6 @@ func (c *client) ListSubjects(ctx context.Context, bearerToken string) ([]Subjec
 	return subjects, nil
 }
 
-// ListSchoolMembers keeps School as source of truth for Campus people. Campus
-// owns course data, not institution memberships or their roles.
 func (c *client) ListSchoolMembers(ctx context.Context, bearerToken, schoolID string) ([]SchoolMemberInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/schools/"+url.PathEscape(schoolID)+"/members", nil)
 	if err != nil {

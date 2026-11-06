@@ -25,23 +25,14 @@ type (
 		Attempt   AttemptData           `json:"attempt"`
 		Questions []StudentQuestionData `json:"questions"`
 		TimeLimit *int                  `json:"time_limit_secs"`
-		// Resumed tells the client it is rejoining an attempt already under
-		// way rather than starting a fresh one, so it can say so instead of
-		// implying the clock just began.
+
 		Resumed bool `json:"resumed"`
-		// SavedAnswers is the work already stored for this attempt, so
-		// continuing restores what was written rather than showing an empty
-		// form. Empty on a fresh attempt.
+
 		SavedAnswers []DraftAnswerData `json:"saved_answers"`
-		// ServerNow lets the client measure its own clock against the
-		// server's. The countdown runs on that difference, so a device whose
-		// clock is wrong — or deliberately set forward — neither shortens nor
-		// extends the exam.
+
 		ServerNow string `json:"server_now"`
 	}
 
-	// DraftAnswerData is a stored answer without any grading attached; what
-	// the student typed, nothing about whether it is right.
 	DraftAnswerData struct {
 		QuestionID string `json:"question_id"`
 		AnswerText string `json:"answer_text"`
@@ -85,10 +76,6 @@ func (u *startUsecase) Execute(ctx context.Context, requesterID, quizID string) 
 		return nil, apperrors.NewBadRequestError(status.Reason)
 	}
 
-	// Whether the quiz admits a *new* attempt. Rejecting here would also
-	// reject resuming, which locked a student out of an exam already under
-	// way the moment a teacher moved the dates; StartOrResume applies this
-	// only on the path that creates one.
 	windowOpen := q.AcceptsNewAttempts(time.Now())
 
 	questions, err := app.Repositories.Quiz.ListQuestions(ctx, quizID)
@@ -99,10 +86,6 @@ func (u *startUsecase) Execute(ctx context.Context, requesterID, quizID string) 
 		return nil, apperrors.NewBadRequestError("this quiz has no questions yet")
 	}
 
-	// One atomic step: it hands back the attempt already in progress if there
-	// is one, so reloading the page rejoins the exam instead of spending
-	// another try on it, and it settles the attempt number under a lock so
-	// two clicks cannot collide on it.
 	result, err := app.Repositories.QuizAttempt.StartOrResume(ctx, attemptrepo.StartParams{
 		QuizID:        quizID,
 		UserID:        requesterID,
@@ -120,8 +103,6 @@ func (u *startUsecase) Execute(ctx context.Context, requesterID, quizID string) 
 		return nil, apperrors.NewInternalError(err)
 	}
 
-	// Only a resumed attempt can have anything stored; a fresh one is empty by
-	// definition, so the extra read is skipped.
 	saved := make([]DraftAnswerData, 0)
 	if result.Resumed {
 		stored, err := app.Repositories.QuizAttempt.ListAnswers(ctx, result.Attempt.ID)

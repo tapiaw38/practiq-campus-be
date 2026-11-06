@@ -7,9 +7,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ListByCourse is scoped by the course's tenant as well as by the course, so a
-// course id belonging to another institution returns nothing rather than its
-// assignments.
 func (r *repository) ListByCourse(ctx context.Context, courseID string) ([]domain.Assignment, error) {
 	query, args, err := tenantcontext.NewQuery(ctx).
 		Through("courses", "c", "a.course_id").

@@ -9,8 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/tenantcontext"
 )
 
-// ErrConversationNotInTenant is returned when a conversation exists but is
-// held in another institution.
 var ErrConversationNotInTenant = errors.New("conversation does not belong to this tenant")
 
 const selectMessageColumns = "m.id, m.conversation_id, m.sender_id, m.body, m.sent_at"
@@ -35,9 +33,6 @@ func (r *repository) GetMessage(ctx context.Context, id string) (*domain.Message
 	return &m, nil
 }
 
-// AddMessage refuses a conversation from another institution. The insert
-// selects its conversation through the tenant, so a conversation id guessed
-// or carried over from another context writes nothing.
 func (r *repository) AddMessage(ctx context.Context, conversationID, senderID, body string) (string, error) {
 	guard, tenantID, err := tenantcontext.ExistsIn(ctx,
 		"conversations c", "c.id = $1", "c.tenant_id", 4)
@@ -57,9 +52,6 @@ func (r *repository) AddMessage(ctx context.Context, conversationID, senderID, b
 		return "", err
 	}
 
-	// Sending a message counts as having read up to that point — otherwise
-	// the sender's own conversation would immediately show as unread to
-	// themselves.
 	if _, err := r.db.ExecContext(ctx,
 		"UPDATE conversation_participants SET last_read_at = NOW() WHERE conversation_id = $1 AND user_id = $2",
 		conversationID, senderID,
@@ -96,12 +88,6 @@ func (r *repository) ListMessages(ctx context.Context, conversationID string) ([
 	return messages, rows.Err()
 }
 
-// IsParticipant is the guard the whole of messaging authorises through, so it
-// answers for one institution at a time.
-//
-// Membership of a conversation does not travel: the same person, in another
-// institution, is not a participant of a thread held in this one. Without the
-// scope, selecting a different tenant kept the old conversation readable.
 func (r *repository) IsParticipant(ctx context.Context, conversationID, userID string) (bool, error) {
 	tenantID := tenantcontext.ID(ctx)
 	if tenantID == "" {

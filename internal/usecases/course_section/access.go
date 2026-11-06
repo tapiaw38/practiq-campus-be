@@ -9,9 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/platform/errors/mappings"
 )
 
-// requesterOwnsCourse checks course ownership directly against the course
-// repository rather than depending on the course usecase package — same
-// decoupling choice already made for enrollment.
 func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) apperrors.ApplicationError {
 	if isSuperAdmin {
 		return nil

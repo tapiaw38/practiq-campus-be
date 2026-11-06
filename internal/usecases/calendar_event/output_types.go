@@ -18,9 +18,7 @@ type EventData struct {
 	RecurrenceRule  string   `json:"recurrence_rule"`
 	ReminderMinutes *int     `json:"reminder_minutes"`
 	AttendeeIDs     []string `json:"attendee_ids,omitempty"`
-	// Source is "manual" for a user-created event or "assignment_due" for a
-	// synthetic entry computed from an assignment's due date — the latter
-	// is never persisted, only assembled at read time.
+
 	Source string `json:"source"`
 }
 

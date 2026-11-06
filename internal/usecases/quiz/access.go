@@ -9,8 +9,6 @@ import (
 	"github.com/tapiaw38/practiq-campus-be/internal/usecases/campusaccess"
 )
 
-// requesterOwnsCourse mirrors the assignment package's check of the same
-// name: only the course owner (or a superadmin) may manage its quizzes.
 func requesterOwnsCourse(ctx context.Context, app *appcontext.Context, requesterID string, isSuperAdmin bool, courseID string) apperrors.ApplicationError {
 	if isSuperAdmin {
 		return nil

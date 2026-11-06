@@ -14,8 +14,6 @@ func formatDateTime(t *time.Time) *string {
 	return &s
 }
 
-// StudentQuestionData is what a student sees while an attempt is in
-// progress: never CorrectAnswer, or the quiz would grade itself.
 type StudentQuestionData struct {
 	ID        string   `json:"id"`
 	Type      string   `json:"type"`
@@ -39,10 +37,7 @@ type AttemptData struct {
 	UserName      string `json:"user_name,omitempty"`
 	AttemptNumber int    `json:"attempt_number"`
 	StartedAt     string `json:"started_at"`
-	// ExpiresAt is the server's deadline for this attempt; null when untimed.
-	// The client counts down to it instead of to its own start time, so a
-	// clock the student can change does not extend the exam, and a resumed
-	// attempt shows the time actually left rather than a fresh allowance.
+
 	ExpiresAt   *string `json:"expires_at"`
 	SubmittedAt *string `json:"submitted_at"`
 	Score       int     `json:"score"`
@@ -72,8 +67,6 @@ func toAttemptDataList(attempts []domain.QuizAttempt) []AttemptData {
 	return out
 }
 
-// AnswerResultData reveals the correct answer: only ever returned once the
-// attempt holding it has been submitted.
 type AnswerResultData struct {
 	QuestionID    string `json:"question_id"`
 	Statement     string `json:"statement"`
